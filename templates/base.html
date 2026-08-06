@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}{{ app_name }}{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <div class="brand-text">
+          <div class="brand-name">{{ app_name }}</div>
+          <div class="brand-tag">{{ app_tagline }}</div>
+        </div>
+        <button type="button" class="sidebar-toggle" data-sidebar-toggle
+                aria-label="Collapse menu" aria-expanded="true" title="Collapse menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M9 4v16"></path>
+          </svg>
+        </button>
+      </div>
+
+      <a class="nav-link {% if request.endpoint == 'dashboard.home' %}active{% endif %}" href="{{ url_for('dashboard.home') }}" data-nav-label="Dashboard">
+        <span class="icon">&#9673;</span><span class="nav-text">Dashboard</span>
+      </a>
+      <a class="nav-link {% if request.endpoint and request.endpoint.startswith('id_cards.') %}active{% endif %}" href="{{ url_for('id_cards.batches') }}" data-nav-label="ID Card Generator">
+        <span class="icon">&#127915;</span><span class="nav-text">ID Card Generator</span>
+      </a>
+
+      <a class="nav-link {% if request.endpoint and request.endpoint.startswith('vcard.') %}active{% endif %}" href="{{ url_for('vcard.list_view') }}" data-nav-label="Digital vCards">
+        <span class="icon">&#128100;</span><span class="nav-text">Digital vCards</span>
+      </a>
+      <a class="nav-link {% if request.endpoint and request.endpoint.startswith('invitation.') %}active{% endif %}" href="{{ url_for('invitation.list_view') }}" data-nav-label="Invitations">
+        <span class="icon">&#128233;</span><span class="nav-text">Invitations</span>
+      </a>
+
+      <a class="nav-link {% if request.endpoint and request.endpoint.startswith('url_qr.') %}active{% endif %}" href="{{ url_for('url_qr.list_view') }}" data-nav-label="URL QR">
+        <span class="icon">&#128279;</span><span class="nav-text">URL QR</span>
+      </a>
+
+      <a class="nav-link {% if request.endpoint and request.endpoint.startswith('image_qr.') %}active{% endif %}" href="{{ url_for('image_qr.list_view') }}" data-nav-label="Image QR">
+        <span class="icon">&#128247;</span><span class="nav-text">Image QR</span>
+      </a>
+      <a class="nav-link {% if request.endpoint and request.endpoint.startswith('upi_qr.') %}active{% endif %}" href="{{ url_for('upi_qr.list_view') }}" data-nav-label="UPI Payment QR">
+        <span class="icon">&#8377;</span><span class="nav-text">UPI Payment QR</span>
+      </a>
+
+      <div class="nav-footer">
+        <div class="user">Signed in as <strong>{{ session.get('username', 'admin') }}</strong></div>
+        <a class="logout-btn" href="{{ url_for('auth.logout') }}" data-nav-label="Log out">
+          <span class="icon">&#9099;</span><span class="nav-text">Log out</span>
+        </a>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="flash flash-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      {% block content %}{% endblock %}
+
+      <footer class="app-footer">{{ app_tagline }} &middot; local &amp; self-hosted</footer>
+    </main>
+  </div>
+
+  {# ---- Shared QR viewer: opened by any .qr-open button on the page ---- #}
+  <div class="qr-modal" id="qrModal" role="dialog" aria-modal="true" aria-labelledby="qrDialogTitle" aria-hidden="true">
+    <div class="qr-dialog">
+      <div class="qr-dialog-head">
+        <div>
+          <div class="kind" data-qr-dialog-kind>QR code</div>
+          <h3 id="qrDialogTitle" data-qr-dialog-title>QR code</h3>
+        </div>
+        <button type="button" class="qr-close" data-qr-close aria-label="Close">&times;</button>
+      </div>
+
+      <div class="qr-stage">
+        <img data-qr-stage-img alt="">
+      </div>
+
+      <div class="qr-linkbox" data-qr-linkbox>
+        <span class="link-label" data-qr-link-label>Encoded link</span>
+        <span data-qr-link-value></span>
+      </div>
+
+      <div class="qr-dialog-actions">
+        <a class="btn btn-primary" data-qr-action-download download>Download</a>
+        <button type="button" class="btn btn-outline" data-qr-action-copy-image>Copy image</button>
+        <button type="button" class="btn btn-outline" data-qr-action-copy-link>Copy link</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-stack" aria-live="polite"></div>
+
+  <script src="{{ url_for('static', filename='js/qr-actions.js') }}"></script>
+</body>
+</html>

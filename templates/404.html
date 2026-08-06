@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Not Found</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body style="background:var(--blue-light); display:flex; align-items:center; justify-content:center; min-height:100vh;">
+  <div class="panel" style="text-align:center; max-width:420px;">
+    <h1 style="color:var(--navy);">404</h1>
+    <p style="color:var(--slate);">{{ message or "The page you're looking for doesn't exist." }}</p>
+    <a href="/" class="btn btn-primary">Go to Dashboard</a>
+  </div>
+</body>
+</html>

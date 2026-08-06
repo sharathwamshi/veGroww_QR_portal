@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Invitations{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Invitation Cards</h1>
+    <p class="subtitle">Shareable invitations with a QR code, map directions and one-tap calendar saving.</p>
+  </div>
+  <div>
+    <a href="{{ url_for('invitation.create') }}" class="btn btn-primary">+ New invitation</a>
+  </div>
+</div>
+
+{% if invitations %}
+<div class="list-toolbar">
+  <div class="search-field">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path>
+    </svg>
+    <input type="search" placeholder="Search by name, occasion or venue" data-filter-input aria-label="Search invitations">
+  </div>
+  <span class="result-count" data-filter-count></span>
+</div>
+
+<div class="qr-grid vcard-grid" data-filter-scope>
+  {% for inv in invitations %}
+  {% set link = inv.qr_short_url or inv.qr_target_url %}
+  <article class="qr-card vcard-card {{ 'is-past' if inv.is_past }}"
+           data-filter-text="{{ inv.headline }} {{ inv.meta.name }} {{ inv.venue_name }} {{ inv.title }}">
+
+    <div class="vcard-banner invite-banner" style="background: linear-gradient(135deg, {{ inv.primary_color }} 0%, {{ inv.secondary_color }} 100%);">
+      <span class="invite-type-pill">{{ inv.meta.icon|safe }} {{ inv.meta.name }}</span>
+      <div class="invite-date-badge">
+        <span class="d">{{ inv.primary_start.strftime('%d') }}</span>
+        <span class="m">{{ inv.primary_start.strftime('%b %Y') }}</span>
+      </div>
+    </div>
+
+    <div class="qr-body vcard-body">
+      <div class="qr-title">{{ inv.headline }}</div>
+      <div class="qr-meta">{{ inv.venue_name }}</div>
+      <div class="vcard-counts">
+        <span>{{ inv.sessions|length }} session{{ '' if inv.sessions|length == 1 else 's' }}</span>
+        {% if inv.has_map %}<span>Map set</span>{% else %}<span class="warn">No map</span>{% endif %}
+        {% if inv.is_past %}<span class="warn">Past</span>{% endif %}
+      </div>
+      <div class="qr-stamp">/invitation/i/{{ inv.slug }}</div>
+    </div>
+
+    <div class="qr-actions">
+      <a class="btn btn-primary btn-sm btn-grow" href="{{ url_for('invitation.preview', invitation_id=inv.id) }}" target="_blank" rel="noopener">View card</a>
+      <a class="btn btn-outline btn-sm btn-grow" href="{{ url_for('invitation.edit', invitation_id=inv.id) }}">Edit</a>
+
+      {% if inv.qr_filename %}
+      <button type="button" class="btn btn-outline btn-sm btn-icon qr-open"
+              title="View QR code" aria-label="View QR code for {{ inv.headline }}"
+              data-qr-src="{{ url_for('media_qr', filename=inv.qr_filename) }}"
+              data-qr-download="{{ url_for('invitation.download_qr', invitation_id=inv.id) }}"
+              data-qr-title="{{ inv.headline }}"
+              data-qr-kind="Invitation QR"
+              data-qr-link="{{ link }}"
+              data-qr-link-label="Opens">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7" rx="1"></rect>
+          <rect x="14" y="3" width="7" height="7" rx="1"></rect>
+          <rect x="3" y="14" width="7" height="7" rx="1"></rect>
+          <path d="M14 14h3v3h-3zM20 20h1M17 20v1"></path>
+        </svg>
+      </button>
+      {% endif %}
+
+      <button type="button" class="btn btn-outline btn-sm btn-icon"
+              title="Copy invitation link" aria-label="Copy invitation link for {{ inv.headline }}"
+              data-copy-link="{{ link }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10 13a5 5 0 0 0 7 0l2-2a5 5 0 0 0-7-7l-1 1"></path>
+          <path d="M14 11a5 5 0 0 0-7 0l-2 2a5 5 0 0 0 7 7l1-1"></path>
+        </svg>
+      </button>
+
+      <form method="POST" action="{{ url_for('invitation.regenerate', invitation_id=inv.id) }}">
+        <button type="submit" class="btn btn-ghost btn-sm btn-icon" title="Regenerate QR" aria-label="Regenerate QR for {{ inv.headline }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12a9 9 0 1 1-2.64-6.36"></path><path d="M21 3v6h-6"></path>
+          </svg>
+        </button>
+      </form>
+
+      <form method="POST" action="{{ url_for('invitation.delete', invitation_id=inv.id) }}"
+            onsubmit="return confirm('Delete the invitation for {{ inv.headline }}? The shared link and QR will stop working.');">
+        <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Delete" aria-label="Delete invitation for {{ inv.headline }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 7h16"></path><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
+            <path d="M6 7v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7"></path>
+          </svg>
+        </button>
+      </form>
+    </div>
+  </article>
+  {% endfor %}
+</div>
+
+<div class="panel empty-state" data-filter-empty style="display:none;">
+  <p>No invitations match that search.</p>
+</div>
+
+{% else %}
+<div class="panel empty-state">
+  <div class="icon">&#128233;</div>
+  <p>No invitations yet. Pick an occasion, add the dates and venue, and you'll get a card guests can save to their calendar and open in Maps.</p>
+  <a href="{{ url_for('invitation.create') }}" class="btn btn-primary">Create your first invitation</a>
+</div>
+{% endif %}
+
+{% endblock %}

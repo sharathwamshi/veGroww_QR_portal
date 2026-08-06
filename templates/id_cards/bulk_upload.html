@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Bulk Upload &mdash; {{ batch.name }}{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Bulk Upload Employees</h1>
+    <p class="subtitle">Batch: {{ batch.name }}</p>
+  </div>
+</div>
+
+<div class="panel" style="max-width:640px;">
+  <form method="POST" enctype="multipart/form-data">
+    <div class="form-group">
+      <label for="data_file">Employee Data File (.csv, .xlsx, .xls)</label>
+      <input type="file" id="data_file" name="data_file" accept=".csv,.xlsx,.xls" required>
+      <div class="hint">
+        Expected columns: <strong>Name</strong>, <strong>Employee Code</strong>, Blood Group, Unit Landline Number,
+        Emergency Contact Number, Employee Contact Number. Column names are matched flexibly (case-insensitive).
+      </div>
+    </div>
+    <button type="submit" class="btn btn-primary">Upload &amp; Import</button>
+    <a href="{{ url_for('id_cards.batch_view', batch_id=batch.id) }}" class="btn btn-outline">Cancel</a>
+  </form>
+</div>
+
+<div class="panel" style="max-width:640px;">
+  <h3 style="margin-top:0;">What happens next</h3>
+  <ol style="color:var(--slate); font-size:13.5px; line-height:1.8; padding-left:18px;">
+    <li>Rows are read from your file and listed under this batch.</li>
+    <li>Employees without a photo are marked <span class="badge badge-pending">Needs Photo</span> &mdash; upload one directly from the employee list.</li>
+    <li>Once a photo is attached, click <strong>Generate</strong> (or <strong>Generate All Ready Cards</strong>) to render the ID card and its QR code.</li>
+    <li>Rows with an Employee Code that already exists in this batch are skipped automatically.</li>
+  </ol>
+</div>
+
+{% endblock %}

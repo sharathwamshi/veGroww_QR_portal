@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% block title %}{{ batch.name }}{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>{{ batch.name }}</h1>
+    <p class="subtitle">
+      {{ batch.company_name }} &middot; {{ batch.total_cards }} employee{{ '' if batch.total_cards == 1 else 's' }}
+      &middot; {{ batch.generated_cards }} card{{ '' if batch.generated_cards == 1 else 's' }} generated
+    </p>
+  </div>
+  <div>
+    <a href="{{ url_for('id_cards.batch_edit', batch_id=batch.id) }}" class="btn btn-outline">Batch settings</a>
+    <a href="{{ url_for('id_cards.bulk_upload', batch_id=batch.id) }}" class="btn btn-outline">Bulk upload</a>
+    <a href="{{ url_for('id_cards.entry_new', batch_id=batch.id) }}" class="btn btn-primary">+ Add employee</a>
+  </div>
+</div>
+
+{% if batch.logo_filename or batch.signature_filename %}
+<div class="panel" style="display:flex; gap:32px; align-items:center; flex-wrap:wrap;">
+  {% if batch.logo_filename %}
+  <div>
+    <div class="hint" style="margin:0 0 6px;">Company logo</div>
+    <img src="{{ url_for('media_logo', filename=batch.logo_filename) }}" alt="Company logo" style="height:44px;">
+  </div>
+  {% endif %}
+  {% if batch.signature_filename %}
+  <div>
+    <div class="hint" style="margin:0 0 6px;">{{ batch.signature_label }}</div>
+    <img src="{{ url_for('media_signature', filename=batch.signature_filename) }}" alt="Issuing authority signature" style="height:38px;">
+  </div>
+  {% endif %}
+  <div style="flex:1;"></div>
+  <div style="color:var(--slate); font-size:13px; max-width:340px;">{{ batch.company_address }}</div>
+</div>
+{% endif %}
+
+<div class="panel">
+  <div class="section-toolbar">
+    <h2>Employees</h2>
+    {% if batch.total_cards %}
+    <form method="POST" action="{{ url_for('id_cards.batch_generate_all', batch_id=batch.id) }}"
+          onsubmit="return confirm('Generate cards for every employee with a photo uploaded?');">
+      <button type="submit" class="btn btn-primary btn-sm">Generate all ready cards</button>
+    </form>
+    {% endif %}
+  </div>
+
+  {% if cards %}
+  <div class="list-toolbar">
+    <div class="search-field">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path>
+      </svg>
+      <input type="search" placeholder="Search by name or employee code" data-filter-input aria-label="Search employees">
+    </div>
+    <span class="result-count" data-filter-count></span>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:52px;">Photo</th>
+          <th>Name</th>
+          <th>Employee code</th>
+          <th>Blood group</th>
+          <th>Contact</th>
+          <th>Status</th>
+          <th style="text-align:right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody data-filter-scope>
+        {% for card in cards %}
+        <tr data-filter-text="{{ card.name }} {{ card.employee_code }} {{ card.employee_contact or '' }}">
+          <td>
+            {% if card.photo_filename %}
+              <img class="thumb" src="{{ url_for('media_photo', filename=card.photo_filename) }}" alt="{{ card.name }}">
+            {% else %}
+              <div class="thumb-placeholder" aria-hidden="true">{{ card.name[0]|upper }}</div>
+            {% endif %}
+          </td>
+          <td><strong>{{ card.name }}</strong></td>
+          <td>{{ card.employee_code }}</td>
+          <td>{{ card.blood_group or '—' }}</td>
+          <td>{{ card.employee_contact or '—' }}</td>
+          <td>
+            {% if card.status == 'generated' %}<span class="badge badge-generated">Generated</span>
+            {% elif card.status == 'ready' %}<span class="badge badge-ready">Ready</span>
+            {% else %}<span class="badge badge-pending">Needs photo</span>{% endif %}
+          </td>
+          <td class="actions-cell">
+            <div class="btn-row">
+              {% if not card.photo_filename %}
+                <form method="POST" action="{{ url_for('id_cards.card_photo_upload', card_id=card.id) }}"
+                      enctype="multipart/form-data" style="display:inline-flex; gap:6px; align-items:center;">
+                  <input type="file" name="photo" accept=".png,.jpg,.jpeg,.webp" required style="width:158px;">
+                  <button type="submit" class="btn btn-outline btn-sm">Upload</button>
+                </form>
+              {% elif card.status == 'generated' %}
+                <a class="btn btn-outline btn-sm" href="{{ url_for('id_cards.download_card', card_id=card.id) }}">Card</a>
+
+                {% set verify_link = card.qr_short_url or card.qr_target_url %}
+                <button type="button" class="btn btn-primary btn-sm qr-open"
+                        data-qr-src="{{ url_for('media_qr', filename=card.qr_filename) }}"
+                        data-qr-download="{{ url_for('id_cards.download_qr', card_id=card.id) }}"
+                        data-qr-title="{{ card.name }} — {{ card.employee_code }}"
+                        data-qr-kind="ID verification QR"
+                        data-qr-link="{{ verify_link }}"
+                        data-qr-link-label="Verification link">QR</button>
+
+                <button type="button" class="btn btn-ghost btn-sm btn-icon" title="Copy verification link"
+                        aria-label="Copy verification link for {{ card.name }}"
+                        data-copy-link="{{ verify_link }}">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M10 13a5 5 0 0 0 7 0l2-2a5 5 0 0 0-7-7l-1 1"></path>
+                    <path d="M14 11a5 5 0 0 0-7 0l-2 2a5 5 0 0 0 7 7l1-1"></path>
+                  </svg>
+                </button>
+
+                <form method="POST" action="{{ url_for('id_cards.card_generate', card_id=card.id) }}">
+                  <button type="submit" class="btn btn-ghost btn-sm btn-icon" title="Regenerate card and QR"
+                          aria-label="Regenerate card for {{ card.name }}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M21 12a9 9 0 1 1-2.64-6.36"></path><path d="M21 3v6h-6"></path>
+                    </svg>
+                  </button>
+                </form>
+              {% else %}
+                <form method="POST" action="{{ url_for('id_cards.card_generate', card_id=card.id) }}">
+                  <button type="submit" class="btn btn-primary btn-sm">Generate</button>
+                </form>
+              {% endif %}
+
+              <a class="btn btn-ghost btn-sm" href="{{ url_for('id_cards.card_edit', card_id=card.id) }}">Edit</a>
+
+              <form method="POST" action="{{ url_for('id_cards.card_delete', card_id=card.id) }}"
+                    onsubmit="return confirm('Delete {{ card.name }}? This removes their photo, card and QR code.');">
+                <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Delete" aria-label="Delete {{ card.name }}">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 7h16"></path><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
+                    <path d="M6 7v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7"></path>
+                  </svg>
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="empty-state" data-filter-empty style="display:none;">
+    <p>No employees match that search.</p>
+  </div>
+
+  {% else %}
+  <div class="empty-state">
+    <div class="icon">&#128100;</div>
+    <p>No employees in this batch yet. Import a sheet or add someone manually to get started.</p>
+    <a href="{{ url_for('id_cards.bulk_upload', batch_id=batch.id) }}" class="btn btn-primary">Bulk upload data</a>
+    <a href="{{ url_for('id_cards.entry_new', batch_id=batch.id) }}" class="btn btn-outline">Add manually</a>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}

@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit Employee' if card else 'Add Employee' }}{% endblock %}
+{% block content %}
+
+{% set f = form if form else card %}
+
+<div class="page-header">
+  <div>
+    <h1>{{ 'Edit Employee' if card else 'Add Employee' }}</h1>
+    <p class="subtitle">Batch: {{ batch.name }}</p>
+  </div>
+</div>
+
+<div class="panel" style="max-width:680px;">
+  <form method="POST" enctype="multipart/form-data">
+    <div class="form-row">
+      <div class="form-group">
+        <label for="name">Full Name</label>
+        <input type="text" id="name" name="name" value="{{ f.name if f else '' }}" required>
+      </div>
+      <div class="form-group">
+        <label for="employee_code">Employee Code</label>
+        <input type="text" id="employee_code" name="employee_code" value="{{ f.employee_code if f else '' }}" required>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="designation">Designation</label>
+        <input type="text" id="designation" name="designation" value="{{ f.designation if f else '' }}">
+      </div>
+      <div class="form-group">
+        <label for="blood_group">Blood Group</label>
+        <input type="text" id="blood_group" name="blood_group" placeholder="e.g. O+" value="{{ f.blood_group if f else '' }}">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="employee_contact">Employee Contact Number</label>
+        <input type="text" id="employee_contact" name="employee_contact" value="{{ f.employee_contact if f else '' }}">
+      </div>
+      <div class="form-group">
+        <label for="emergency_contact">Emergency Contact Number</label>
+        <input type="text" id="emergency_contact" name="emergency_contact" value="{{ f.emergency_contact if f else '' }}">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="landline">Unit Landline Number</label>
+        <input type="text" id="landline" name="landline" value="{{ f.landline if f else '' }}">
+      </div>
+      <div class="form-group">
+        <label for="email">Email (optional)</label>
+        <input type="email" id="email" name="email" value="{{ f.email if f else '' }}">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="photo">Employee Photo</label>
+      <input type="file" id="photo" name="photo" accept=".png,.jpg,.jpeg,.webp">
+      {% if card and card.photo_filename %}
+      <div class="avatar-frame" style="margin-top:10px;">
+        <img class="thumb" src="{{ url_for('media_photo', filename=card.photo_filename) }}">
+        <span class="hint">Current photo &mdash; upload a new file to replace it.</span>
+      </div>
+      {% endif %}
+    </div>
+
+    <button type="submit" class="btn btn-primary">{{ 'Save Changes' if card else 'Add Employee' }}</button>
+    <a href="{{ url_for('id_cards.batch_view', batch_id=batch.id) }}" class="btn btn-outline">Cancel</a>
+  </form>
+</div>
+
+{% endblock %}

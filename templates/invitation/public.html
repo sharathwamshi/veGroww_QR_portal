@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ inv.headline }} &mdash; {{ inv.meta.name }}</title>
+  <meta name="description" content="{{ inv.title }} &middot; {{ inv.primary_start.strftime('%d %B %Y') }} at {{ inv.venue_name }}">
+  <meta name="theme-color" content="{{ inv.primary_color }}">
+  <meta property="og:title" content="{{ inv.headline }}">
+  <meta property="og:description" content="{{ inv.title }} &middot; {{ inv.primary_start.strftime('%d %B %Y') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <style>
+    :root {
+      --iv-primary: {{ inv.primary_color }};
+      --iv-secondary: {{ inv.secondary_color }};
+    }
+  </style>
+</head>
+<body class="iv-body">
+
+  {% if is_preview %}
+  <div class="vc-preview-bar">
+    Preview &middot; <a href="{{ url_for('invitation.edit', invitation_id=inv.id) }}">Edit</a>
+    &middot; <a href="{{ url_for('invitation.list_view') }}">All invitations</a>
+  </div>
+  {% endif %}
+
+  <main class="iv-card">
+
+    <header class="iv-hero">
+      <div class="iv-hero-bg"></div>
+      <div class="iv-ornament" aria-hidden="true">&#10086;</div>
+
+      <p class="iv-eyebrow">{{ inv.title }}</p>
+
+      {% if inv.hero_filename %}
+      <img class="iv-photo" src="{{ url_for('invitation.serve_image', filename=inv.hero_filename) }}" alt="">
+      {% endif %}
+
+      <h1 class="iv-headline">{{ inv.headline }}</h1>
+
+      {% if inv.meta.greeting %}
+      <p class="iv-greeting">{{ inv.meta.greeting }}</p>
+      {% endif %}
+
+      {% if inv.host('bride_parents') or inv.host('groom_parents') %}
+      <div class="iv-parents">
+        {% if inv.host('bride_parents') %}<span>{{ inv.host('bride_parents') }}</span>{% endif %}
+        {% if inv.host('groom_parents') %}<span>{{ inv.host('groom_parents') }}</span>{% endif %}
+      </div>
+      {% elif inv.host('parents_names') %}
+      <div class="iv-parents"><span>{{ inv.host('parents_names') }}</span></div>
+      {% endif %}
+
+      <div class="iv-divider" aria-hidden="true"><span></span>&#10022;<span></span></div>
+    </header>
+
+    {# ---- Sticky call to action: the two things a guest actually needs ---- #}
+    <div class="iv-actions">
+      <a class="iv-btn iv-btn-primary" href="{{ url_for('invitation.calendar_file', slug=inv.slug) }}"
+         data-add-calendar>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="5" width="18" height="16" rx="2"></rect>
+          <path d="M16 3v4M8 3v4M3 11h18M12 15v4M10 17h4"></path>
+        </svg>
+        Add to calendar
+      </a>
+      {% if inv.has_map %}
+      <a class="iv-btn iv-btn-outline" href="{{ inv.maps_link }}" target="_blank" rel="noopener"
+         {% if inv.geo_uri %}data-geo-uri="{{ inv.geo_uri }}"{% endif %}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0z"></path><circle cx="12" cy="10" r="3"></circle>
+        </svg>
+        Open in Maps
+      </a>
+      {% endif %}
+    </div>
+
+    <div class="iv-sheet">
+
+      {% if inv.message %}
+      <p class="iv-message">{{ inv.message }}</p>
+      {% endif %}
+
+      {# ---- When ---- #}
+      <section class="iv-section">
+        <h2 class="iv-section-title">When</h2>
+        {% for session in inv.sessions %}
+        <div class="iv-session">
+          <div class="iv-date-chip">
+            <span class="iv-date-day">{{ session.start.strftime('%d') }}</span>
+            <span class="iv-date-mon">{{ session.start.strftime('%b') }}</span>
+          </div>
+          <div class="iv-session-body">
+            <div class="iv-session-label">{{ session.label }}</div>
+            <div class="iv-session-when">{{ session.start.strftime('%A, %d %B %Y') }}</div>
+            <div class="iv-session-time">
+              {{ session.start.strftime('%I:%M %p').lstrip('0') }}{% if session.end %} &ndash; {{ session.end.strftime('%I:%M %p').lstrip('0') }}{% endif %}
+            </div>
+            <a class="iv-session-cal" href="{{ gcal(session) }}" target="_blank" rel="noopener">Add to Google Calendar</a>
+          </div>
+        </div>
+        {% endfor %}
+      </section>
+
+      {# ---- Where ---- #}
+      <section class="iv-section">
+        <h2 class="iv-section-title">Where</h2>
+        <div class="iv-venue">
+          <div class="iv-venue-name">{{ inv.venue_name }}</div>
+          {% if inv.venue_address %}<div class="iv-venue-address">{{ inv.venue_address }}</div>{% endif %}
+          {% if inv.has_map %}
+          <a class="iv-venue-map" href="{{ inv.maps_link }}" target="_blank" rel="noopener"
+             {% if inv.geo_uri %}data-geo-uri="{{ inv.geo_uri }}"{% endif %}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0z"></path><circle cx="12" cy="10" r="3"></circle>
+            </svg>
+            Get directions
+          </a>
+          {% endif %}
+        </div>
+      </section>
+
+      {% if inv.dress_code %}
+      <section class="iv-section">
+        <h2 class="iv-section-title">Dress code</h2>
+        <p class="iv-plain">{{ inv.dress_code }}</p>
+      </section>
+      {% endif %}
+
+      {% if inv.rsvp_phone or inv.rsvp_whatsapp %}
+      <section class="iv-section">
+        <h2 class="iv-section-title">RSVP</h2>
+        <div class="iv-rsvp">
+          {% if inv.rsvp_phone %}
+          <a class="iv-btn iv-btn-soft" href="tel:{{ inv.rsvp_phone|replace(' ', '') }}">Call {{ inv.rsvp_phone }}</a>
+          {% endif %}
+          {% if inv.rsvp_whatsapp %}
+          <a class="iv-btn iv-btn-soft" href="https://wa.me/{{ inv.rsvp_whatsapp|replace(' ', '')|replace('+', '') }}" target="_blank" rel="noopener">WhatsApp</a>
+          {% endif %}
+        </div>
+      </section>
+      {% endif %}
+
+      <div class="iv-footer">
+        <div class="iv-ornament-sm" aria-hidden="true">&#10022;</div>
+        <p>We look forward to celebrating with you</p>
+      </div>
+    </div>
+  </main>
+
+  {# Nudge toward the calendar, since that's the whole point of the card. #}
+  <div class="iv-nudge" data-calendar-nudge hidden>
+    <div class="iv-nudge-inner">
+      <span>Save the date to your phone so you don't miss it.</span>
+      <a class="iv-btn iv-btn-primary iv-btn-sm" href="{{ url_for('invitation.calendar_file', slug=inv.slug) }}" data-add-calendar>Add to calendar</a>
+      <button type="button" class="iv-nudge-close" data-nudge-dismiss aria-label="Dismiss">&times;</button>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/invitation.js') }}"></script>
+</body>
+</html>

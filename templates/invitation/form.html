@@ -1,0 +1,335 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit invitation' if mode == 'edit' else 'New invitation' }}{% endblock %}
+
+{% macro val(field) %}{%- if form -%}{{ form.get(field, '') }}{%- elif invitation -%}{% set v = invitation|attr(field) %}{{ v if v is not none else '' }}{%- endif -%}{% endmacro %}
+{% macro dval(field, fmt) %}{%- if form -%}{{ form.get(field, '') }}{%- elif invitation and invitation|attr(field) -%}{{ (invitation|attr(field)).strftime(fmt) }}{%- endif -%}{% endmacro %}
+
+{% set current_type = form.get('event_type') if form else (invitation.event_type if invitation else '') %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>{{ 'Edit invitation' if mode == 'edit' else 'Create an invitation' }}</h1>
+    <p class="subtitle">
+      {% if mode == 'edit' %}Changes appear on the shared page straight away — the link and QR stay the same.
+      {% else %}Pick the occasion, fill in the details, and you'll get a shareable page with a QR code.{% endif %}
+    </p>
+  </div>
+  <div>
+    <a href="{{ url_for('invitation.list_view') }}" class="btn btn-ghost">Cancel</a>
+    {% if mode == 'edit' %}
+    <a href="{{ url_for('invitation.preview', invitation_id=invitation.id) }}" target="_blank" rel="noopener" class="btn btn-outline">View card</a>
+    {% endif %}
+  </div>
+</div>
+
+<form method="POST" enctype="multipart/form-data" class="vcard-form" data-invite-form>
+
+  {# Step 1 — occasion #}
+  <section class="accordion" data-accordion open>
+    <button type="button" class="accordion-head" data-accordion-toggle aria-expanded="true">
+      <span class="accordion-icon">&#127881;</span>
+      <span class="accordion-titles">
+        <span class="accordion-title">Occasion</span>
+        <span class="accordion-sub">Choose the event — the fields below adapt to it.</span>
+        <span class="accordion-summary" data-accordion-summary hidden></span>
+      </span>
+      <span class="accordion-chevron" aria-hidden="true"></span>
+    </button>
+    <div class="accordion-body">
+      {% for group, events in grouped.items() %}
+      <div class="event-group">
+        <div class="event-group-title">{{ group }}</div>
+        <div class="event-picker">
+          {% for key, meta in events %}
+          <label class="event-option {{ 'is-selected' if current_type == key }}">
+            <input type="radio" name="event_type" value="{{ key }}" required
+                   data-event-radio
+                   data-two-sessions="{{ '1' if meta.two_sessions else '0' }}"
+                   data-primary-color="{{ meta.palette[0] }}"
+                   data-secondary-color="{{ meta.palette[1] }}"
+                   {{ 'checked' if current_type == key }}>
+            <span class="event-emoji">{{ meta.icon|safe }}</span>
+            <span class="event-name">{{ meta.name }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  {# Step 2 — who it's for. One fieldset per event type; JS shows the matching one. #}
+  <section class="accordion" data-accordion open>
+    <button type="button" class="accordion-head" data-accordion-toggle aria-expanded="true">
+      <span class="accordion-icon">&#128100;</span>
+      <span class="accordion-titles">
+        <span class="accordion-title">Who it's for</span>
+        <span class="accordion-sub">The names printed on the card.</span>
+      </span>
+      <span class="accordion-chevron" aria-hidden="true"></span>
+    </button>
+    <div class="accordion-body">
+      <p class="pick-first" data-pick-first>Choose an occasion above and the right fields will appear here.</p>
+
+      {% for key, meta in event_types.items() %}
+      <div class="host-fields" data-host-fields="{{ key }}" hidden>
+        <div class="form-row">
+          {% for field_name, label, required, placeholder in meta.hosts %}
+          <div class="form-group">
+            <label for="host_{{ key }}_{{ field_name }}">{{ label }}{% if required %} <span class="req">*</span>{% endif %}</label>
+            <input type="text" id="host_{{ key }}_{{ field_name }}" name="host_{{ field_name }}"
+                   placeholder="{{ placeholder }}"
+                   data-required-when="{{ '1' if required else '0' }}"
+                   value="{% if form %}{{ form.get('host_' ~ field_name, '') }}{% elif invitation %}{{ invitation.host(field_name) }}{% endif %}">
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+
+      <div class="form-group">
+        <label for="title">Card title</label>
+        <input type="text" id="title" name="title" placeholder="Defaults to the occasion name" value="{{ val('title') }}">
+        <p class="hint">Small line above the names, e.g. "Wedding Invitation" or "With love, the Nair family".</p>
+      </div>
+    </div>
+  </section>
+
+  {# Step 3 — when #}
+  <section class="accordion" data-accordion open>
+    <button type="button" class="accordion-head" data-accordion-toggle aria-expanded="true">
+      <span class="accordion-icon">&#128197;</span>
+      <span class="accordion-titles">
+        <span class="accordion-title">Date &amp; time</span>
+        <span class="accordion-sub">Goes straight into the guest's phone calendar.</span>
+      </span>
+      <span class="accordion-chevron" aria-hidden="true"></span>
+    </button>
+    <div class="accordion-body">
+
+      <div class="session-block">
+        <div class="session-heading" data-primary-heading>Ceremony</div>
+        <div class="form-group">
+          <label for="primary_label">Session name</label>
+          <input type="text" id="primary_label" name="primary_label" placeholder="E.g. Muhurtham" value="{{ val('primary_label') }}">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="primary_date">Date <span class="req">*</span></label>
+            <input type="date" id="primary_date" name="primary_date" required value="{{ dval('primary_start', '%Y-%m-%d') }}">
+          </div>
+          <div class="form-group">
+            <label for="primary_time">Start time <span class="req">*</span></label>
+            <input type="time" id="primary_time" name="primary_time" required value="{{ dval('primary_start', '%H:%M') }}">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="primary_end_time">End time</label>
+          <input type="time" id="primary_end_time" name="primary_end_time" value="{{ dval('primary_end', '%H:%M') }}">
+          <p class="hint">Optional — the calendar entry runs three hours if you leave it blank.</p>
+        </div>
+      </div>
+
+      <div class="session-block session-secondary" data-secondary-block hidden>
+        <div class="session-heading">Reception</div>
+        <div class="form-group">
+          <label for="secondary_label">Session name</label>
+          <input type="text" id="secondary_label" name="secondary_label" placeholder="E.g. Reception" value="{{ val('secondary_label') }}">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="secondary_date">Date <span class="req">*</span></label>
+            <input type="date" id="secondary_date" name="secondary_date" value="{{ dval('secondary_start', '%Y-%m-%d') }}">
+          </div>
+          <div class="form-group">
+            <label for="secondary_time">Start time <span class="req">*</span></label>
+            <input type="time" id="secondary_time" name="secondary_time" value="{{ dval('secondary_start', '%H:%M') }}">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="secondary_end_time">End time</label>
+          <input type="time" id="secondary_end_time" name="secondary_end_time" value="{{ dval('secondary_end', '%H:%M') }}">
+        </div>
+        <p class="hint">Both sessions are added when a guest taps "Add to calendar".</p>
+      </div>
+    </div>
+  </section>
+
+  {# Step 4 — where #}
+  <section class="accordion" data-accordion open>
+    <button type="button" class="accordion-head" data-accordion-toggle aria-expanded="true">
+      <span class="accordion-icon">&#128205;</span>
+      <span class="accordion-titles">
+        <span class="accordion-title">Venue &amp; location</span>
+        <span class="accordion-sub">Opens directly in the guest's map app.</span>
+      </span>
+      <span class="accordion-chevron" aria-hidden="true"></span>
+    </button>
+    <div class="accordion-body">
+      <div class="form-group">
+        <label for="venue_name">Venue name <span class="req">*</span></label>
+        <input type="text" id="venue_name" name="venue_name" required
+               placeholder="E.g. Sri Kalyana Mandapam" value="{{ val('venue_name') }}">
+      </div>
+      <div class="form-group">
+        <label for="venue_address">Full address</label>
+        <textarea id="venue_address" name="venue_address" rows="2"
+                  placeholder="Street, area, city, PIN">{{ val('venue_address') }}</textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="location_ref">Map link or coordinates</label>
+        <div class="location-field">
+          <input type="text" id="location_ref" name="location_ref" data-location-input
+                 placeholder="Paste a Maps link, or 12.9716, 77.5946"
+                 value="{% if form %}{{ form.get('location_ref', '') }}{% elif invitation %}{% if invitation.latitude is not none %}{{ invitation.latitude }}, {{ invitation.longitude }}{% else %}{{ invitation.map_url or '' }}{% endif %}{% endif %}">
+          <a class="btn btn-outline" data-open-maps href="https://www.google.com/maps" target="_blank" rel="noopener">Open Maps</a>
+        </div>
+        <p class="location-status" data-location-status></p>
+        <p class="hint">
+          In Google Maps: search the venue, tap <strong>Share &rarr; Copy link</strong> and paste it here.
+          For an exact pin, long-press the spot and tap the coordinates that appear at the top to copy them.
+          Coordinates work best — they let the card open the guest's own map app.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  {# Step 5 — extras #}
+  <section class="accordion" data-accordion {{ 'open' if invitation and (invitation.message or invitation.rsvp_phone or invitation.hero_filename) }}>
+    <button type="button" class="accordion-head" data-accordion-toggle
+            aria-expanded="{{ 'true' if invitation and (invitation.message or invitation.rsvp_phone or invitation.hero_filename) else 'false' }}">
+      <span class="accordion-icon">&#9997;</span>
+      <span class="accordion-titles">
+        <span class="accordion-title">Message, photo &amp; RSVP</span>
+        <span class="accordion-sub">Optional touches for the card.</span>
+      </span>
+      <span class="accordion-chevron" aria-hidden="true"></span>
+    </button>
+    <div class="accordion-body">
+      <div class="image-picker">
+        <div class="image-preview" data-image-preview>
+          {% if invitation and invitation.hero_filename %}
+            <img src="{{ url_for('invitation.serve_image', filename=invitation.hero_filename) }}" alt="Current photo">
+          {% else %}
+            <span class="image-placeholder">No photo</span>
+          {% endif %}
+        </div>
+        <div class="image-picker-controls">
+          <label for="hero">Photo</label>
+          <input type="file" name="hero" id="hero" accept=".png,.jpg,.jpeg,.webp" data-image-input>
+          <p class="hint">Shown at the top of the card. PNG, JPG or WEBP.</p>
+          {% if invitation and invitation.hero_filename %}
+          <label class="checkbox-row" style="margin-top:10px;">
+            <input type="checkbox" name="remove_hero"> Remove the current photo
+          </label>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="message">Message to guests</label>
+        <textarea id="message" name="message" rows="3"
+                  placeholder="A line or two — your presence would mean the world to us.">{{ val('message') }}</textarea>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="rsvp_phone">RSVP phone</label>
+          <input type="text" id="rsvp_phone" name="rsvp_phone" placeholder="+91 98450 00000" value="{{ val('rsvp_phone') }}">
+        </div>
+        <div class="form-group">
+          <label for="rsvp_whatsapp">WhatsApp number</label>
+          <input type="text" id="rsvp_whatsapp" name="rsvp_whatsapp" placeholder="+91 98450 00000" value="{{ val('rsvp_whatsapp') }}">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="dress_code">Dress code</label>
+        <input type="text" id="dress_code" name="dress_code" placeholder="E.g. Traditional / Indian formal" value="{{ val('dress_code') }}">
+      </div>
+    </div>
+  </section>
+
+  {# Step 6 — design #}
+  <section class="accordion" data-accordion>
+    <button type="button" class="accordion-head" data-accordion-toggle aria-expanded="false">
+      <span class="accordion-icon">&#127912;</span>
+      <span class="accordion-titles">
+        <span class="accordion-title">Colours</span>
+        <span class="accordion-sub">Set automatically by the occasion — change if you like.</span>
+      </span>
+      <span class="accordion-chevron" aria-hidden="true"></span>
+    </button>
+    <div class="accordion-body">
+      <div class="palette-row">
+        {% for pair in [('#8C1D40','#D4A15E'), ('#1F6F8B','#A8DADC'), ('#1B7A4B','#B7E4C7'),
+                        ('#7D3C98','#E8DAEF'), ('#C2410C','#FDD9A0'), ('#123B6B','#BBD4EF')] %}
+        <button type="button" class="palette-swatch" data-palette="{{ pair[0] }}|{{ pair[1] }}"
+                aria-label="Use palette {{ pair[0] }} and {{ pair[1] }}">
+          <span style="background: {{ pair[0] }};"></span>
+          <span style="background: {{ pair[1] }};"></span>
+        </button>
+        {% endfor %}
+      </div>
+      <div class="form-row" style="align-items:end;">
+        <div class="form-group">
+          <label for="primary_color">Primary colour</label>
+          <div class="color-field">
+            <input type="color" id="primary_color_picker" data-color-picker="primary_color"
+                   value="{{ val('primary_color') or '#8C1D40' }}" aria-label="Pick primary colour">
+            <input type="text" name="primary_color" id="primary_color" data-color-text
+                   value="{{ val('primary_color') or '#8C1D40' }}">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="secondary_color">Secondary colour</label>
+          <div class="color-field">
+            <input type="color" id="secondary_color_picker" data-color-picker="secondary_color"
+                   value="{{ val('secondary_color') or '#D4A15E' }}" aria-label="Pick secondary colour">
+            <input type="text" name="secondary_color" id="secondary_color" data-color-text
+                   value="{{ val('secondary_color') or '#D4A15E' }}">
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {% if mode == 'create' %}
+  <section class="accordion" data-accordion>
+    <button type="button" class="accordion-head" data-accordion-toggle aria-expanded="false">
+      <span class="accordion-icon">&#9635;</span>
+      <span class="accordion-titles">
+        <span class="accordion-title">Page address</span>
+        <span class="accordion-sub">The link guests receive.</span>
+      </span>
+      <span class="accordion-chevron" aria-hidden="true"></span>
+    </button>
+    <div class="accordion-body">
+      <div class="form-group">
+        <label for="slug">Address</label>
+        <div class="slug-field">
+          <span>/invitation/i/</span>
+          <input type="text" id="slug" name="slug" placeholder="priya-arun-wedding">
+        </div>
+        <p class="hint">Leave blank to build it from the names. Fixed once created, since the QR points at it.</p>
+      </div>
+    </div>
+  </section>
+  {% else %}
+  <div class="panel">
+    <label>Page address</label>
+    <div class="readonly-value">/invitation/i/{{ invitation.slug }}</div>
+    <p class="hint">Fixed, so invitations already shared keep working.</p>
+  </div>
+  {% endif %}
+
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary">{{ 'Save changes' if mode == 'edit' else 'Create invitation' }}</button>
+    <a href="{{ url_for('invitation.list_view') }}" class="btn btn-ghost">Cancel</a>
+  </div>
+</form>
+
+{% endblock %}

@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}UPI Payment QR Codes{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>UPI Payment QR Codes</h1>
+    <p class="subtitle">All generated payment QR codes, managed from one place.</p>
+  </div>
+  <div>
+    <a href="{{ url_for('upi_qr.generate') }}" class="btn btn-primary">+ New UPI QR</a>
+  </div>
+</div>
+
+{% if items %}
+<div class="list-toolbar">
+  <div class="search-field">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path>
+    </svg>
+    <input type="search" placeholder="Search by payee, UPI ID or note" data-filter-input aria-label="Search UPI QR codes">
+  </div>
+  <span class="result-count" data-filter-count></span>
+</div>
+
+<div class="qr-grid" data-filter-scope>
+  {% for item in items %}
+  {% set label = item.payee_name or item.upi_id %}
+  <article class="qr-card" data-filter-text="{{ item.payee_name or '' }} {{ item.upi_id }} {{ item.note or '' }}">
+    <div class="qr-plate">
+      <img src="{{ url_for('media_qr', filename=item.qr_filename) }}" alt="UPI payment QR code for {{ label }}" loading="lazy">
+      <button type="button" class="qr-open"
+              aria-label="View UPI QR code for {{ label }}"
+              data-qr-src="{{ url_for('media_qr', filename=item.qr_filename) }}"
+              data-qr-download="{{ url_for('upi_qr.download_qr', item_id=item.id) }}"
+              data-qr-title="{{ label }}"
+              data-qr-kind="UPI Payment QR"
+              data-qr-link="{{ item.upi_uri }}"
+              data-qr-link-label="UPI payment link"></button>
+      <span class="zoom-hint">View</span>
+    </div>
+
+    <div class="qr-body">
+      <div class="qr-title">{{ label }}</div>
+      <div class="qr-meta">
+        <code>{{ item.upi_id }}</code>{% if item.amount %} &middot; &#8377;{{ '%.2f'|format(item.amount) }}{% else %} &middot; open amount{% endif %}
+      </div>
+      {% if item.note %}<div class="qr-stamp">{{ item.note }}</div>{% endif %}
+    </div>
+
+    <div class="qr-actions">
+      <a class="btn btn-primary btn-sm btn-grow"
+         href="{{ url_for('upi_qr.download_qr', item_id=item.id) }}">Download QR</a>
+
+      <button type="button" class="btn btn-outline btn-sm btn-icon"
+              title="Copy QR image" aria-label="Copy QR image for {{ label }}"
+              data-copy-image="{{ url_for('media_qr', filename=item.qr_filename) }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="9" y="9" width="12" height="12" rx="2"></rect>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+        </svg>
+      </button>
+
+      <button type="button" class="btn btn-outline btn-sm btn-icon"
+              title="Copy UPI payment link" aria-label="Copy UPI payment link for {{ label }}"
+              data-copy-link="{{ item.upi_uri }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10 13a5 5 0 0 0 7 0l2-2a5 5 0 0 0-7-7l-1 1"></path>
+          <path d="M14 11a5 5 0 0 0-7 0l-2 2a5 5 0 0 0 7 7l1-1"></path>
+        </svg>
+      </button>
+
+      <form method="POST" action="{{ url_for('upi_qr.delete', item_id=item.id) }}"
+            onsubmit="return confirm('Delete the UPI QR for {{ item.upi_id }}? This cannot be undone.');">
+        <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Delete" aria-label="Delete UPI QR for {{ label }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 7h16"></path><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
+            <path d="M6 7v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7"></path>
+          </svg>
+        </button>
+      </form>
+    </div>
+  </article>
+  {% endfor %}
+</div>
+
+<div class="panel empty-state" data-filter-empty style="display:none;">
+  <p>No payment codes match that search.</p>
+</div>
+
+{% else %}
+<div class="panel empty-state">
+  <div class="icon">&#8377;</div>
+  <p>No UPI payment QR codes yet. Enter a UPI ID and the portal will build a scannable payment code.</p>
+  <a href="{{ url_for('upi_qr.generate') }}" class="btn btn-primary">Generate your first one</a>
+</div>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ card.full_name }}{% if card.role_line %} — {{ card.role_line }}{% endif %}</title>
+  <meta name="description" content="{{ card.role_line or card.full_name }}">
+  <meta name="theme-color" content="{{ card.primary_color }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <style>
+    /* Per-card theme — the only place these two colours are known. */
+    :root {
+      --vc-primary: {{ card.primary_color }};
+      --vc-secondary: {{ card.secondary_color }};
+    }
+  </style>
+</head>
+<body class="vc-body">
+
+  {% if is_preview %}
+  <div class="vc-preview-bar">
+    Preview &middot; <a href="{{ url_for('vcard.edit', card_id=card.id) }}">Edit this card</a>
+    &middot; <a href="{{ url_for('vcard.list_view') }}">Back to vCards</a>
+  </div>
+  {% endif %}
+
+  <main class="vc-page">
+    <header class="vc-hero">
+      <div class="vc-hero-fill"></div>
+      <div class="vc-hero-content">
+        {% if card.image_filename %}
+          <img class="vc-photo" src="{{ url_for('vcard.serve_image', filename=card.image_filename) }}" alt="{{ card.full_name }}">
+        {% else %}
+          <div class="vc-photo vc-photo-initials">{{ card.first_name[0]|upper }}{{ card.last_name[0]|upper if card.last_name }}</div>
+        {% endif %}
+
+        <h1 class="vc-name">{{ card.full_name }}</h1>
+        {% if card.role_line %}<p class="vc-role">{{ card.role_line }}</p>{% endif %}
+
+        {% if card.show_add_contact %}
+        <a class="vc-add-contact" href="{{ url_for('vcard.contact_vcf', slug=card.slug) }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle><path d="M19 8v6M22 11h-6"></path>
+          </svg>
+          Add contact
+        </a>
+        {% endif %}
+      </div>
+    </header>
+
+    <div class="vc-sheet">
+
+      {% if card.summary %}
+      <section class="vc-section">
+        <p class="vc-summary">{{ card.summary }}</p>
+      </section>
+      {% endif %}
+
+      {% if card.phones or card.emails or card.websites %}
+      <section class="vc-section">
+        <h2 class="vc-section-title">Get in touch</h2>
+        <ul class="vc-rows">
+          {% for link in card.phones %}
+          <li><a class="vc-row" href="tel:{{ link.value|replace(' ', '') }}">
+            <span class="vc-row-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"></path>
+              </svg>
+            </span>
+            <span class="vc-row-text">
+              <span class="vc-row-value">{{ link.value }}</span>
+              <span class="vc-row-label">{{ link.label or 'Phone' }}</span>
+            </span>
+            <span class="vc-row-go" aria-hidden="true">&rsaquo;</span>
+          </a></li>
+          {% endfor %}
+
+          {% for link in card.emails %}
+          <li><a class="vc-row" href="mailto:{{ link.value }}">
+            <span class="vc-row-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="m2 7 10 6 10-6"></path>
+              </svg>
+            </span>
+            <span class="vc-row-text">
+              <span class="vc-row-value">{{ link.value }}</span>
+              <span class="vc-row-label">{{ link.label or 'Email' }}</span>
+            </span>
+            <span class="vc-row-go" aria-hidden="true">&rsaquo;</span>
+          </a></li>
+          {% endfor %}
+
+          {% for link in card.websites %}
+          <li><a class="vc-row" href="{{ link.value }}" target="_blank" rel="noopener">
+            <span class="vc-row-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18"></path>
+              </svg>
+            </span>
+            <span class="vc-row-text">
+              <span class="vc-row-value">{{ link.value }}</span>
+              <span class="vc-row-label">{{ link.label or 'Website' }}</span>
+            </span>
+            <span class="vc-row-go" aria-hidden="true">&rsaquo;</span>
+          </a></li>
+          {% endfor %}
+        </ul>
+      </section>
+      {% endif %}
+
+      {% if card.socials %}
+      <section class="vc-section">
+        <h2 class="vc-section-title">Find me on</h2>
+        <ul class="vc-rows">
+          {% for link in card.socials %}
+          {% set meta = platform_meta(link.platform) %}
+          <li><a class="vc-row" href="{{ link.value }}" target="_blank" rel="noopener">
+            <span class="vc-chip" style="background: {{ meta[1] }};">{{ meta[2] }}</span>
+            <span class="vc-row-text">
+              <span class="vc-row-value">{{ meta[0] }}</span>
+              {% if link.label %}<span class="vc-row-label">{{ link.label }}</span>{% endif %}
+            </span>
+            <span class="vc-row-go" aria-hidden="true">&rsaquo;</span>
+          </a></li>
+          {% endfor %}
+        </ul>
+      </section>
+      {% endif %}
+
+      {% if card.formatted_address %}
+      <section class="vc-section">
+        <h2 class="vc-section-title">Location</h2>
+        <a class="vc-row" href="https://www.google.com/maps/search/?api=1&query={{ card.formatted_address|urlencode }}"
+           target="_blank" rel="noopener">
+          <span class="vc-row-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0z"></path><circle cx="12" cy="10" r="3"></circle>
+            </svg>
+          </span>
+          <span class="vc-row-text">
+            <span class="vc-row-value">{{ card.formatted_address }}</span>
+            <span class="vc-row-label">Open in Maps</span>
+          </span>
+          <span class="vc-row-go" aria-hidden="true">&rsaquo;</span>
+        </a>
+      </section>
+      {% endif %}
+
+      {% if not card.show_add_contact %}
+      <a class="vc-add-contact vc-add-contact-inline" href="{{ url_for('vcard.contact_vcf', slug=card.slug) }}">
+        Save to contacts
+      </a>
+      {% endif %}
+
+      <p class="vc-footer">{{ app_tagline }}</p>
+    </div>
+  </main>
+</body>
+</html>

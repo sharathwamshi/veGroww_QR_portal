@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Dashboard &mdash; {{ app_name }}{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Dashboard</h1>
+    <p class="subtitle">Overview of ID cards and QR codes generated across the portal.</p>
+  </div>
+</div>
+
+<div class="stat-grid">
+  <div class="stat-card">
+    <div class="value">{{ stats.batches }}</div>
+    <div class="label">ID Card Batches</div>
+  </div>
+  <div class="stat-card">
+    <div class="value">{{ stats.total_cards }}</div>
+    <div class="label">Total Employees</div>
+  </div>
+  <div class="stat-card">
+    <div class="value">{{ stats.generated_cards }}</div>
+    <div class="label">Cards Generated</div>
+  </div>
+  <div class="stat-card">
+    <div class="value">{{ stats.pending_cards }}</div>
+    <div class="label">Pending Photo / Generation</div>
+  </div>
+  <div class="stat-card">
+    <div class="value">{{ stats.image_qrs }}</div>
+    <div class="label">Image QR Codes</div>
+  </div>
+  <div class="stat-card">
+    <div class="value">{{ stats.upi_qrs }}</div>
+    <div class="label">UPI Payment QR Codes</div>
+  </div>
+  <div class="stat-card">
+    <div class="value">{{ stats.vcards }}</div>
+    <div class="label">Digital vCards</div>
+  </div>
+  <div class="stat-card">
+    <div class="value">{{ stats.url_qrs }}</div>
+    <div class="label">URL QR Codes</div>
+  </div>
+  <div class="stat-card">
+    <div class="value">{{ stats.invitations }}</div>
+    <div class="label">Invitations</div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="section-toolbar">
+    <h2 style="margin:0;">Recent Batches</h2>
+    <a href="{{ url_for('id_cards.batch_new') }}" class="btn btn-primary btn-sm">+ New Batch</a>
+  </div>
+
+  {% if recent_batches %}
+  <table>
+    <thead>
+      <tr><th>Batch</th><th>Company</th><th>Employees</th><th>Generated</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for b in recent_batches %}
+      <tr>
+        <td><strong>{{ b.name }}</strong></td>
+        <td>{{ b.company_name }}</td>
+        <td>{{ b.total_cards }}</td>
+        <td>{{ b.generated_cards }} / {{ b.total_cards }}</td>
+        <td><a href="{{ url_for('id_cards.batch_view', batch_id=b.id) }}" class="btn btn-outline btn-sm">Open</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state">
+    <div class="icon">&#128193;</div>
+    <p>No batches yet. Create your first batch to start issuing ID cards.</p>
+    <a href="{{ url_for('id_cards.batch_new') }}" class="btn btn-primary">Create a Batch</a>
+  </div>
+  {% endif %}
+</div>
+
+<div class="stat-grid" style="grid-template-columns: repeat(auto-fit, minmax(260px,1fr));">
+  <div class="panel" style="margin-bottom:0;">
+    <h3>Image QR</h3>
+    <p style="color:var(--slate); font-size:13.5px;">Upload any image and get a scannable QR code that opens it.</p>
+    <a href="{{ url_for('image_qr.upload') }}" class="btn btn-outline btn-sm">Generate Image QR</a>
+  </div>
+  <div class="panel" style="margin-bottom:0;">
+    <h3>UPI Payment QR</h3>
+    <p style="color:var(--slate); font-size:13.5px;">Create a QR code for a UPI ID, with an optional fixed amount.</p>
+    <a href="{{ url_for('upi_qr.generate') }}" class="btn btn-outline btn-sm">Generate UPI QR</a>
+  </div>
+</div>
+
+{% endblock %}

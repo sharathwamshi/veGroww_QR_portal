@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Image QR Codes{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Image QR Codes</h1>
+    <p class="subtitle">Every image you've turned into a QR code, managed from one place.</p>
+  </div>
+  <div>
+    <a href="{{ url_for('image_qr.upload') }}" class="btn btn-primary">+ New Image QR</a>
+  </div>
+</div>
+
+{% if items %}
+<div class="list-toolbar">
+  <div class="search-field">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path>
+    </svg>
+    <input type="search" placeholder="Search by title or link" data-filter-input aria-label="Search image QR codes">
+  </div>
+  <span class="result-count" data-filter-count></span>
+</div>
+
+<div class="qr-grid" data-filter-scope>
+  {% for item in items %}
+  {% set encoded = item.short_url or item.target_url %}
+  <article class="qr-card" data-filter-text="{{ item.title }} {{ encoded }}">
+    <div class="qr-plate">
+      <img src="{{ url_for('media_qr', filename=item.qr_filename) }}" alt="QR code for {{ item.title }}" loading="lazy">
+      <button type="button" class="qr-open"
+              aria-label="View QR code for {{ item.title }}"
+              data-qr-src="{{ url_for('media_qr', filename=item.qr_filename) }}"
+              data-qr-download="{{ url_for('image_qr.download_qr', item_id=item.id) }}"
+              data-qr-title="{{ item.title }}"
+              data-qr-kind="Image QR"
+              data-qr-link="{{ encoded }}"
+              data-qr-link-label="Scans to"></button>
+      <span class="zoom-hint">View</span>
+    </div>
+
+    <div class="qr-body">
+      <div class="qr-title">{{ item.title }}</div>
+      <div class="qr-meta"><code>{{ encoded }}</code></div>
+      {% if item.created_at %}<div class="qr-stamp">Created {{ item.created_at.strftime('%d %b %Y') }}</div>{% endif %}
+    </div>
+
+    <div class="qr-actions">
+      <a class="btn btn-primary btn-sm btn-grow"
+         href="{{ url_for('image_qr.download_qr', item_id=item.id) }}">Download QR</a>
+
+      <button type="button" class="btn btn-outline btn-sm btn-icon"
+              title="Copy QR image" aria-label="Copy QR image for {{ item.title }}"
+              data-copy-image="{{ url_for('media_qr', filename=item.qr_filename) }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="9" y="9" width="12" height="12" rx="2"></rect>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+        </svg>
+      </button>
+
+      <button type="button" class="btn btn-outline btn-sm btn-icon"
+              title="Copy link" aria-label="Copy link for {{ item.title }}"
+              data-copy-link="{{ encoded }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10 13a5 5 0 0 0 7 0l2-2a5 5 0 0 0-7-7l-1 1"></path>
+          <path d="M14 11a5 5 0 0 0-7 0l-2 2a5 5 0 0 0 7 7l1-1"></path>
+        </svg>
+      </button>
+
+      <a class="btn btn-ghost btn-sm btn-icon" title="Open original image" aria-label="Open original image for {{ item.title }}"
+         href="{{ url_for('image_qr.serve_image', filename=item.image_filename) }}" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+          <circle cx="8.5" cy="8.5" r="1.5"></circle>
+          <path d="m21 15-5-5L5 21"></path>
+        </svg>
+      </a>
+
+      <form method="POST" action="{{ url_for('image_qr.regenerate', item_id=item.id) }}">
+        <button type="submit" class="btn btn-ghost btn-sm btn-icon" title="Regenerate QR" aria-label="Regenerate QR for {{ item.title }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12a9 9 0 1 1-2.64-6.36"></path><path d="M21 3v6h-6"></path>
+          </svg>
+        </button>
+      </form>
+
+      <form method="POST" action="{{ url_for('image_qr.delete', item_id=item.id) }}"
+            onsubmit="return confirm('Delete “{{ item.title }}” and its QR code? This cannot be undone.');">
+        <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Delete" aria-label="Delete {{ item.title }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 7h16"></path><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
+            <path d="M6 7v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7"></path>
+          </svg>
+        </button>
+      </form>
+    </div>
+  </article>
+  {% endfor %}
+</div>
+
+<div class="panel empty-state" data-filter-empty style="display:none;">
+  <p>No image QR codes match that search.</p>
+</div>
+
+{% else %}
+<div class="panel empty-state">
+  <div class="icon">&#128247;</div>
+  <p>No image QR codes yet. Upload an image and the portal will generate a scannable code that opens it.</p>
+  <a href="{{ url_for('image_qr.upload') }}" class="btn btn-primary">Generate your first one</a>
+</div>
+{% endif %}
+
+{% endblock %}

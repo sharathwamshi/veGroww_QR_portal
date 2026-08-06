@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit URL QR' if mode == 'edit' else 'New URL QR' }}{% endblock %}
+{% macro val(field) %}{%- if form -%}{{ form.get(field, '') }}{%- elif item -%}{{ item|attr(field) or '' }}{%- endif -%}{% endmacro %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>{{ 'Edit URL QR code' if mode == 'edit' else 'Create a URL QR code' }}</h1>
+    <p class="subtitle">Point a scannable code at any web address &mdash; a website, form, menu, catalogue or document.</p>
+  </div>
+  <a href="{{ url_for('url_qr.list_view') }}" class="btn btn-outline">View all</a>
+</div>
+
+<div class="panel" style="max-width:620px;">
+  <form method="POST">
+    <div class="form-group">
+      <label for="name">Name <span class="req">*</span></label>
+      <input type="text" id="name" name="name" required
+             placeholder="E.g. Spring catalogue 2026" value="{{ val('name') }}">
+      <p class="hint">Only used inside the portal &mdash; for the listing and the downloaded filename.</p>
+    </div>
+
+    <div class="form-group">
+      <label for="target_url">Destination URL <span class="req">*</span></label>
+      <input type="text" id="target_url" name="target_url" required
+             placeholder="https://example.com/page" value="{{ val('target_url') }}">
+      <p class="hint">Type or paste the full address. If you leave off <code>https://</code> it's added for you.</p>
+    </div>
+
+    {% if mode == 'edit' %}
+    <div class="flash flash-info" style="margin-bottom:18px;">
+      Changing the URL generates a brand new QR code. Codes already printed will keep pointing at the old address.
+    </div>
+    {% endif %}
+
+    <div class="form-actions" style="padding-top:4px;">
+      <button type="submit" class="btn btn-primary">{{ 'Save changes' if mode == 'edit' else 'Generate QR code' }}</button>
+      <a href="{{ url_for('url_qr.list_view') }}" class="btn btn-ghost">Cancel</a>
+    </div>
+  </form>
+</div>
+
+{% endblock %}

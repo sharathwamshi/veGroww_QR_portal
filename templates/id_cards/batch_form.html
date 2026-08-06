@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit Batch' if batch else 'New Batch' }}{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>{{ 'Edit Batch' if batch else 'New ID Card Batch' }}</h1>
+    <p class="subtitle">These settings apply globally to every card generated in this batch.</p>
+  </div>
+</div>
+
+<div class="panel" style="max-width:640px;">
+  <form method="POST" enctype="multipart/form-data">
+    <div class="form-group">
+      <label for="name">Batch Name</label>
+      <input type="text" id="name" name="name" placeholder="e.g. HR Onboarding &ndash; July 2026" value="{{ batch.name if batch else '' }}" required>
+    </div>
+
+    <div class="form-group">
+      <label for="company_name">Company Name</label>
+      <input type="text" id="company_name" name="company_name" placeholder="e.g. Vegroww Technologies Pvt. Ltd." value="{{ batch.company_name if batch else '' }}" required>
+    </div>
+
+    <div class="form-group">
+      <label for="company_address">Company Address</label>
+      <textarea id="company_address" name="company_address" rows="2" placeholder="Full registered address printed on every card" required>{{ batch.company_address if batch else '' }}</textarea>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="logo">Company Logo</label>
+        <input type="file" id="logo" name="logo" accept=".png,.jpg,.jpeg,.webp">
+        <div class="hint">
+          {% if batch and batch.logo_filename %}Current logo is set &mdash; upload a new file to replace it.{% else %}PNG with transparent background works best.{% endif %}
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="signature">Issuing Authority Signature</label>
+        <input type="file" id="signature" name="signature" accept=".png,.jpg,.jpeg,.webp">
+        <div class="hint">
+          {% if batch and batch.signature_filename %}Current signature is set &mdash; upload a new file to replace it.{% else %}Scanned signature or stamp, transparent PNG recommended.{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="signature_label">Signature Label</label>
+      <input type="text" id="signature_label" name="signature_label" placeholder="e.g. Unit HR Head" value="{{ batch.signature_label if batch else 'Issuing Authority' }}">
+    </div>
+
+    <button type="submit" class="btn btn-primary">{{ 'Save Changes' if batch else 'Create Batch' }}</button>
+    <a href="{{ url_for('id_cards.batches') if not batch else url_for('id_cards.batch_view', batch_id=batch.id) }}" class="btn btn-outline">Cancel</a>
+  </form>
+</div>
+
+{% endblock %}

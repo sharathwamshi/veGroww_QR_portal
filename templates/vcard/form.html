@@ -1,0 +1,334 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit vCard' if mode == 'edit' else 'New vCard' }}{% endblock %}
+
+{# Value resolution order: a rejected submission's form data, then the saved
+   card, then the default. Keeps typed input after a validation error. #}
+{% macro val(field, default='') %}{%- if form -%}{{ form.get(field, '') }}{%- elif card -%}{% set v = card|attr(field) %}{{ v if v is not none else '' }}{%- else -%}{{ default }}{%- endif -%}{% endmacro %}
+
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>{{ 'Edit vCard' if mode == 'edit' else 'New vCard' }}</h1>
+    <p class="subtitle">
+      {% if mode == 'edit' %}Changes go live on the public page immediately — the QR keeps working.
+      {% else %}Fill in what you need. Only the name is required; empty sections are hidden on the page.{% endif %}
+    </p>
+  </div>
+  <div>
+    <a href="{{ url_for('vcard.list_view') }}" class="btn btn-ghost">Cancel</a>
+    {% if mode == 'edit' %}
+    <a href="{{ url_for('vcard.preview', card_id=card.id) }}" target="_blank" rel="noopener" class="btn btn-outline">View page</a>
+    {% endif %}
+  </div>
+</div>
+
+<form method="POST" enctype="multipart/form-data" class="vcard-form">
+
+  {# Design #}
+  <section class="accordion" data-accordion open>
+    <button type="button" class="accordion-head" data-accordion-toggle aria-expanded="true">
+      <span class="accordion-icon">&#127912;</span>
+      <span class="accordion-titles">
+        <span class="accordion-title">Design</span>
+        <span class="accordion-sub">Choose the colour theme for the page.</span>
+      </span>
+      <span class="accordion-chevron" aria-hidden="true"></span>
+    </button>
+    <div class="accordion-body">
+      <label>Colour palette</label>
+      <div class="palette-row">
+        {% for pair in [('#527AC9','#7EC09F'), ('#EDEDED','#222222'), ('#DCE9F7','#527AC9'),
+                        ('#B79BE0','#222222'), ('#7EC09F','#222222'), ('#E9BE6A','#222222')] %}
+        <button type="button" class="palette-swatch" data-palette="{{ pair[0] }}|{{ pair[1] }}"
+                aria-label="Use palette {{ pair[0] }} and {{ pair[1] }}">
+          <span style="background: {{ pair[0] }};"></span>
+          <span style="background: {{ pair[1] }};"></span>
+        </button>
+        {% endfor %}
+      </div>
+
+      <div class="form-row" style="align-items:end;">
+        <div class="form-group">
+          <label for="primary_color">Primary colour</label>
+          <div class="color-field">
+            <input type="color" id="primary_color_picker" data-color-picker="primary_color"
+                   value="{{ val('primary_color') or '#527AC9' }}" aria-label="Pick primary colour">
+            <input type="text" name="primary_color" id="primary_color"
+                   value="{{ val('primary_color') or '#527AC9' }}" data-color-text>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="secondary_color">Secondary colour</label>
+          <div class="color-field">
+            <input type="color" id="secondary_color_picker" data-color-picker="secondary_color"
+                   value="{{ val('secondary_color') or '#7EC09F' }}" aria-label="Pick secondary colour">
+            <input type="text" name="secondary_color" id="secondary_color"
+                   value="{{ val('secondary_color') or '#7EC09F' }}" data-color-text>
+          </div>
+        </div>
+      </div>
+      <p class="hint">The two colours form the gradient banner at the top of the public page.</p>
+    </div>
+  </section>
+
+  {# Personal information #}
+  <section class="accordion" data-accordion open>
+    <button type="button" class="accordion-head" data-accordion-toggle aria-expanded="true">
+      <span class="accordion-icon">&#128100;</span>
+      <span class="accordion-titles">
+        <span class="accordion-title">Personal information</span>
+        <span class="accordion-sub">Photo and name shown at the top of the card.</span>
+      </span>
+      <span class="accordion-chevron" aria-hidden="true"></span>
+    </button>
+    <div class="accordion-body">
+      <div class="image-picker">
+        <div class="image-preview" data-image-preview>
+          {% if card and card.image_filename %}
+            <img src="{{ url_for('vcard.serve_image', filename=card.image_filename) }}" alt="Current profile image">
+          {% else %}
+            <span class="image-placeholder">No image</span>
+          {% endif %}
+        </div>
+        <div class="image-picker-controls">
+          <label for="image">Profile image</label>
+          <input type="file" name="image" id="image" accept=".png,.jpg,.jpeg,.webp" data-image-input>
+          <p class="hint">Square images look best. PNG, JPG or WEBP.</p>
+          {% if card and card.image_filename %}
+          <label class="checkbox-row" style="margin-top:10px;">
+            <input type="checkbox" name="remove_image"> Remove the current image
+          </label>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="first_name">Name <span class="req">*</span></label>
+          <input type="text" name="first_name" id="first_name" required
+                 placeholder="E.g. Priya" value="{{ val('first_name') }}">
+        </div>
+        <div class="form-group">
+          <label for="last_name">Surname</label>
+          <input type="text" name="last_name" id="last_name"
+                 placeholder="E.g. Nair" value="{{ val('last_name') }}">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {# Contact details #}
+  <section class="accordion" data-accordion open>
+    <button type="button" class="accordion-head" data-accordion-toggle aria-expanded="true">
+      <span class="accordion-icon">&#9742;</span>
+      <span class="accordion-titles">
+        <span class="accordion-title">Contact details</span>
+        <span class="accordion-sub">Phones, emails and websites to display on the card.</span>
+      </span>
+      <span class="accordion-chevron" aria-hidden="true"></span>
+    </button>
+    <div class="accordion-body">
+
+      {% for group, heading, placeholder, label_ph, input_type in [
+          ('phone', 'Phone numbers', '+91 98450 00000', 'Work', 'text'),
+          ('email', 'Email addresses', 'name@company.com', 'Work', 'text'),
+          ('website', 'Websites', 'https://company.com', 'Portfolio', 'text')] %}
+      <div class="repeat-group" data-repeat-group="{{ group }}">
+        <div class="repeat-head">
+          <span class="repeat-heading">{{ heading }}</span>
+          <button type="button" class="btn btn-outline btn-sm" data-repeat-add="{{ group }}">+ Add</button>
+        </div>
+        <div class="repeat-rows" data-repeat-rows>
+          {% if card %}
+            {% for link in card.links_of(group) %}
+            <div class="repeat-row">
+              <input type="text" name="{{ group }}_value" value="{{ link.value }}" placeholder="{{ placeholder }}">
+              <input type="text" name="{{ group }}_label" value="{{ link.label or '' }}" placeholder="Label — {{ label_ph }}">
+              <button type="button" class="btn btn-danger btn-sm btn-icon" data-repeat-remove aria-label="Remove this {{ group }}">&times;</button>
+            </div>
+            {% endfor %}
+          {% endif %}
+        </div>
+        <template data-repeat-template>
+          <div class="repeat-row">
+            <input type="text" name="{{ group }}_value" placeholder="{{ placeholder }}">
+            <input type="text" name="{{ group }}_label" placeholder="Label — {{ label_ph }}">
+            <button type="button" class="btn btn-danger btn-sm btn-icon" data-repeat-remove aria-label="Remove this {{ group }}">&times;</button>
+          </div>
+        </template>
+        <p class="repeat-empty" data-repeat-empty>No {{ heading|lower }} added.</p>
+      </div>
+      {% endfor %}
+
+      <label class="checkbox-row">
+        <input type="checkbox" name="show_add_contact"
+               {% if form %}{{ 'checked' if form.get('show_add_contact') }}{% elif card %}{{ 'checked' if card.show_add_contact }}{% else %}checked{% endif %}>
+        Show the "Add contact" button at the top of the page
+      </label>
+      <p class="hint">Saves everything above straight into the visitor's phone contacts as a .vcf file.</p>
+    </div>
+  </section>
+
+  {# Location #}
+  {% set loc_open = card and (card.address_line or card.city or card.state or card.postal_code or card.country) %}
+  <section class="accordion" data-accordion {{ 'open' if loc_open }}>
+    <button type="button" class="accordion-head" data-accordion-toggle aria-expanded="{{ 'true' if loc_open else 'false' }}">
+      <span class="accordion-icon">&#128205;</span>
+      <span class="accordion-titles">
+        <span class="accordion-title">Location</span>
+        <span class="accordion-sub">Address shown on the card, with a link to maps.</span>
+      </span>
+      <span class="accordion-chevron" aria-hidden="true"></span>
+    </button>
+    <div class="accordion-body">
+      <div class="form-group">
+        <label for="address_line">Street address</label>
+        <input type="text" name="address_line" id="address_line"
+               placeholder="E.g. 12 MG Road" value="{{ val('address_line') }}">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="city">City</label>
+          <input type="text" name="city" id="city" placeholder="Bengaluru" value="{{ val('city') }}">
+        </div>
+        <div class="form-group">
+          <label for="state">State</label>
+          <input type="text" name="state" id="state" placeholder="Karnataka" value="{{ val('state') }}">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="postal_code">Postal code</label>
+          <input type="text" name="postal_code" id="postal_code" placeholder="560001" value="{{ val('postal_code') }}">
+        </div>
+        <div class="form-group">
+          <label for="country">Country</label>
+          <input type="text" name="country" id="country" placeholder="India" value="{{ val('country') }}">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {# Company details #}
+  {% set co_open = card and (card.company or card.profession or card.summary) %}
+  <section class="accordion" data-accordion {{ 'open' if co_open }}>
+    <button type="button" class="accordion-head" data-accordion-toggle aria-expanded="{{ 'true' if co_open else 'false' }}">
+      <span class="accordion-icon">&#127970;</span>
+      <span class="accordion-titles">
+        <span class="accordion-title">Company details</span>
+        <span class="accordion-sub">Business information and a short summary.</span>
+      </span>
+      <span class="accordion-chevron" aria-hidden="true"></span>
+    </button>
+    <div class="accordion-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="company">Company</label>
+          <input type="text" name="company" id="company" placeholder="E.g. Firm ABC" value="{{ val('company') }}">
+        </div>
+        <div class="form-group">
+          <label for="profession">Profession</label>
+          <input type="text" name="profession" id="profession" placeholder="E.g. Account manager" value="{{ val('profession') }}">
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="summary">Summary</label>
+        <textarea name="summary" id="summary" rows="4"
+                  placeholder="A line or two about what you do.">{{ val('summary') }}</textarea>
+      </div>
+    </div>
+  </section>
+
+  {# Social networks #}
+  {% set soc_open = card and card.socials %}
+  <section class="accordion" data-accordion {{ 'open' if soc_open }}>
+    <button type="button" class="accordion-head" data-accordion-toggle aria-expanded="{{ 'true' if soc_open else 'false' }}">
+      <span class="accordion-icon">&#127760;</span>
+      <span class="accordion-titles">
+        <span class="accordion-title">Social networks</span>
+        <span class="accordion-sub">Profile links shown as tappable chips.</span>
+      </span>
+      <span class="accordion-chevron" aria-hidden="true"></span>
+    </button>
+    <div class="accordion-body">
+      <div class="repeat-group" data-repeat-group="social">
+        <div class="repeat-head">
+          <span class="repeat-heading">Profiles</span>
+          <button type="button" class="btn btn-outline btn-sm" data-repeat-add="social">+ Add</button>
+        </div>
+        <div class="repeat-rows" data-repeat-rows>
+          {% if card %}
+            {% for link in card.socials %}
+            <div class="repeat-row repeat-row-social">
+              <select name="social_platform">
+                {% for key, meta in platforms.items() %}
+                <option value="{{ key }}" {{ 'selected' if link.platform == key }}>{{ meta[0] }}</option>
+                {% endfor %}
+              </select>
+              <input type="text" name="social_value" value="{{ link.value }}" placeholder="https://instagram.com/yourname">
+              <input type="text" name="social_label" value="{{ link.label or '' }}" placeholder="Label — Follow me">
+              <button type="button" class="btn btn-danger btn-sm btn-icon" data-repeat-remove aria-label="Remove this profile">&times;</button>
+            </div>
+            {% endfor %}
+          {% endif %}
+        </div>
+        <template data-repeat-template>
+          <div class="repeat-row repeat-row-social">
+            <select name="social_platform">
+              {% for key, meta in platforms.items() %}
+              <option value="{{ key }}">{{ meta[0] }}</option>
+              {% endfor %}
+            </select>
+            <input type="text" name="social_value" placeholder="https://instagram.com/yourname">
+            <input type="text" name="social_label" placeholder="Label — Follow me">
+            <button type="button" class="btn btn-danger btn-sm btn-icon" data-repeat-remove aria-label="Remove this profile">&times;</button>
+          </div>
+        </template>
+        <p class="repeat-empty" data-repeat-empty>No profiles added.</p>
+      </div>
+    </div>
+  </section>
+
+  {# Name of the QR code #}
+  <section class="accordion" data-accordion {{ 'open' if mode == 'edit' }}>
+    <button type="button" class="accordion-head" data-accordion-toggle aria-expanded="{{ 'true' if mode == 'edit' else 'false' }}">
+      <span class="accordion-icon">&#9635;</span>
+      <span class="accordion-titles">
+        <span class="accordion-title">Name of the QR code</span>
+        <span class="accordion-sub">How this card is labelled inside the portal.</span>
+      </span>
+      <span class="accordion-chevron" aria-hidden="true"></span>
+    </button>
+    <div class="accordion-body">
+      <div class="form-group">
+        <label for="qr_name">QR code name</label>
+        <input type="text" name="qr_name" id="qr_name" placeholder="Defaults to the person's name" value="{{ val('qr_name') }}">
+        <p class="hint">Used in the listing and as the downloaded PNG filename.</p>
+      </div>
+      {% if mode == 'create' %}
+      <div class="form-group">
+        <label for="slug">Page address</label>
+        <div class="slug-field">
+          <span>/vcard/v/</span>
+          <input type="text" name="slug" id="slug" placeholder="priya-nair">
+        </div>
+        <p class="hint">Leave blank to build it from the name. This can't be changed later — the QR points at it.</p>
+      </div>
+      {% else %}
+      <div class="form-group">
+        <label>Page address</label>
+        <div class="readonly-value">/vcard/v/{{ card.slug }}</div>
+        <p class="hint">Fixed, so QR codes already printed keep resolving.</p>
+      </div>
+      {% endif %}
+    </div>
+  </section>
+
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary">{{ 'Save changes' if mode == 'edit' else 'Create vCard' }}</button>
+    <a href="{{ url_for('vcard.list_view') }}" class="btn btn-ghost">Cancel</a>
+  </div>
+</form>
+
+{% endblock %}

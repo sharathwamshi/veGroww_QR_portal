@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Digital vCards{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Digital vCards</h1>
+    <p class="subtitle">Shareable contact pages, each with its own QR code and downloadable contact file.</p>
+  </div>
+  <div>
+    <a href="{{ url_for('vcard.create') }}" class="btn btn-primary">+ New vCard</a>
+  </div>
+</div>
+
+{% if cards %}
+<div class="list-toolbar">
+  <div class="search-field">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path>
+    </svg>
+    <input type="search" placeholder="Search by name, company or role" data-filter-input aria-label="Search vCards">
+  </div>
+  <span class="result-count" data-filter-count></span>
+</div>
+
+<div class="qr-grid vcard-grid" data-filter-scope>
+  {% for card in cards %}
+  {% set link = card.qr_short_url or card.qr_target_url %}
+  <article class="qr-card vcard-card" data-filter-text="{{ card.full_name }} {{ card.company or '' }} {{ card.profession or '' }} {{ card.slug }}">
+
+    <div class="vcard-banner" style="background: linear-gradient(135deg, {{ card.primary_color }} 0%, {{ card.secondary_color }} 100%);">
+      {% if card.image_filename %}
+        <img class="vcard-avatar" src="{{ url_for('vcard.serve_image', filename=card.image_filename) }}" alt="{{ card.full_name }}">
+      {% else %}
+        <div class="vcard-avatar vcard-avatar-initials">{{ card.first_name[0]|upper }}{{ card.last_name[0]|upper if card.last_name }}</div>
+      {% endif %}
+    </div>
+
+    <div class="qr-body vcard-body">
+      <div class="qr-title">{{ card.full_name }}</div>
+      <div class="qr-meta">{{ card.role_line or 'No role set' }}</div>
+      <div class="vcard-counts">
+        <span title="Phone numbers">{{ card.phones|length }} phone</span>
+        <span title="Email addresses">{{ card.emails|length }} email</span>
+        <span title="Links and social profiles">{{ (card.websites|length) + (card.socials|length) }} link</span>
+      </div>
+      <div class="qr-stamp">/vcard/v/{{ card.slug }}</div>
+    </div>
+
+    <div class="qr-actions">
+      <a class="btn btn-primary btn-sm btn-grow" href="{{ url_for('vcard.preview', card_id=card.id) }}" target="_blank" rel="noopener">View page</a>
+      <a class="btn btn-outline btn-sm btn-grow" href="{{ url_for('vcard.edit', card_id=card.id) }}">Edit</a>
+
+      {% if card.qr_filename %}
+      <button type="button" class="btn btn-outline btn-sm btn-icon qr-open"
+              title="View QR code" aria-label="View QR code for {{ card.full_name }}"
+              data-qr-src="{{ url_for('media_qr', filename=card.qr_filename) }}"
+              data-qr-download="{{ url_for('vcard.download_qr', card_id=card.id) }}"
+              data-qr-title="{{ card.full_name }}"
+              data-qr-kind="vCard QR"
+              data-qr-link="{{ link }}"
+              data-qr-link-label="Opens">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7" rx="1"></rect>
+          <rect x="14" y="3" width="7" height="7" rx="1"></rect>
+          <rect x="3" y="14" width="7" height="7" rx="1"></rect>
+          <path d="M14 14h3v3h-3zM20 20h1M17 20v1"></path>
+        </svg>
+      </button>
+      {% endif %}
+
+      <button type="button" class="btn btn-outline btn-sm btn-icon"
+              title="Copy page link" aria-label="Copy page link for {{ card.full_name }}"
+              data-copy-link="{{ link }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10 13a5 5 0 0 0 7 0l2-2a5 5 0 0 0-7-7l-1 1"></path>
+          <path d="M14 11a5 5 0 0 0-7 0l-2 2a5 5 0 0 0 7 7l1-1"></path>
+        </svg>
+      </button>
+
+      <form method="POST" action="{{ url_for('vcard.regenerate', card_id=card.id) }}"
+            onsubmit="return confirm('Regenerate the QR for {{ card.full_name }}? Codes already printed will still work — they point at the same page.');">
+        <button type="submit" class="btn btn-ghost btn-sm btn-icon" title="Regenerate QR" aria-label="Regenerate QR for {{ card.full_name }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12a9 9 0 1 1-2.64-6.36"></path><path d="M21 3v6h-6"></path>
+          </svg>
+        </button>
+      </form>
+
+      <form method="POST" action="{{ url_for('vcard.delete', card_id=card.id) }}"
+            onsubmit="return confirm('Delete the vCard for {{ card.full_name }}? The public page and its QR will stop working.');">
+        <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Delete" aria-label="Delete {{ card.full_name }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 7h16"></path><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
+            <path d="M6 7v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7"></path>
+          </svg>
+        </button>
+      </form>
+    </div>
+  </article>
+  {% endfor %}
+</div>
+
+<div class="panel empty-state" data-filter-empty style="display:none;">
+  <p>No vCards match that search.</p>
+</div>
+
+{% else %}
+<div class="panel empty-state">
+  <div class="icon">&#128100;</div>
+  <p>No vCards yet. Build one and you'll get a shareable contact page, a QR code that opens it, and an "Add contact" button that saves straight to a phone.</p>
+  <a href="{{ url_for('vcard.create') }}" class="btn btn-primary">Create your first vCard</a>
+</div>
+{% endif %}
+
+{% endblock %}
