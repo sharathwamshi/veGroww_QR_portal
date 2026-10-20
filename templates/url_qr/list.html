@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "_macros.html" as m with context %}
 {% block title %}URL QR Codes{% endblock %}
 {% block content %}
 
@@ -7,10 +8,13 @@
     <h1>URL QR Codes</h1>
     <p class="subtitle">Scannable codes pointing at web addresses, managed from one place.</p>
   </div>
-  <div>
-    <a href="{{ url_for('url_qr.create') }}" class="btn btn-primary">+ New URL QR</a>
+  <div class="header-actions">
+    {{ m.quota_meter('url_qr') }}
+    {{ m.new_button('url_qr', url_for('url_qr.create'), '+ New URL QR') }}
   </div>
 </div>
+
+{{ m.limit_notice('url_qr') }}
 
 {% if items %}
 <div class="list-toolbar">
@@ -48,7 +52,7 @@
 
     <div class="qr-actions">
       <a class="btn btn-primary btn-sm btn-grow" href="{{ url_for('url_qr.download_qr', item_id=item.id) }}">Download QR</a>
-      <a class="btn btn-outline btn-sm btn-grow" href="{{ url_for('url_qr.edit', item_id=item.id) }}">Edit</a>
+      <a class="btn btn-outline btn-sm btn-grow" href="{{ url_for('url_qr.edit', item_id=item.id) }}" data-write>Edit</a>
 
       <button type="button" class="btn btn-outline btn-sm btn-icon"
               title="Copy QR image" aria-label="Copy QR image for {{ item.name }}"
@@ -77,6 +81,7 @@
       </a>
 
       <form method="POST" action="{{ url_for('url_qr.regenerate', item_id=item.id) }}">
+{{ csrf_field() }}
         <button type="submit" class="btn btn-ghost btn-sm btn-icon" title="Regenerate QR" aria-label="Regenerate QR for {{ item.name }}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 12a9 9 0 1 1-2.64-6.36"></path><path d="M21 3v6h-6"></path>
@@ -85,7 +90,8 @@
       </form>
 
       <form method="POST" action="{{ url_for('url_qr.delete', item_id=item.id) }}"
-            onsubmit="return confirm('Delete the QR code for {{ item.name }}? This cannot be undone.');">
+            data-confirm="Delete the QR code for {{ item.name }}? This cannot be undone.">
+{{ csrf_field() }}
         <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Delete" aria-label="Delete {{ item.name }}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M4 7h16"></path><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
@@ -106,7 +112,7 @@
 <div class="panel empty-state">
   <div class="icon">&#128279;</div>
   <p>No URL QR codes yet. Give a name and a web address, and you'll get a code that opens it.</p>
-  <a href="{{ url_for('url_qr.create') }}" class="btn btn-primary">Create your first one</a>
+  <a href="{{ url_for('url_qr.create') }}" class="btn btn-primary" data-write>Create your first one</a>
 </div>
 {% endif %}
 

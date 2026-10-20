@@ -1,13 +1,16 @@
-import os
 import re
 
 from flask import (Blueprint, current_app, flash, redirect, render_template,
                    request, send_from_directory, url_for)
 
+from flask import g
+
 from extensions import db
 from models import UpiQR
+from utils.access import get_owned_or_404, limit_response, owned, record_usage
+from utils.cleanup import delete_upi_qr
 from utils.decorators import login_required
-from utils.file_helpers import delete_if_exists, safe_download_name
+from utils.file_helpers import safe_download_name
 from utils.qr_utils import build_upi_uri, save_qr_for_raw_data
 
 upi_qr_bp = Blueprint("upi_qr", __name__, url_prefix="/upi-qr")
@@ -18,13 +21,17 @@ UPI_ID_PATTERN = re.compile(r"^[\w.\-]{2,256}@[a-zA-Z]{2,64}$")
 @upi_qr_bp.route("/")
 @login_required
 def list_view():
-    items = UpiQR.query.order_by(UpiQR.created_at.desc()).all()
+    items = owned(UpiQR).order_by(UpiQR.created_at.desc()).all()
     return render_template("upi_qr/list.html", items=items)
 
 
 @upi_qr_bp.route("/new", methods=["GET", "POST"])
 @login_required
 def generate():
+    blocked = limit_response("upi_qr")
+    if blocked:
+        return blocked
+
     if request.method == "POST":
         upi_id = request.form.get("upi_id", "").strip()
         payee_name = request.form.get("payee_name", "").strip()
@@ -49,6 +56,7 @@ def generate():
         qr_filename = save_qr_for_raw_data(upi_uri, current_app.config["QR_DIR"], filename_prefix="upiqr")
 
         record = UpiQR(
+            owner_id=g.user.id,
             upi_id=upi_id,
             payee_name=payee_name or None,
             amount=amount,
@@ -57,6 +65,7 @@ def generate():
             qr_filename=qr_filename,
         )
         db.session.add(record)
+        record_usage(g.user, "upi_qr")
         db.session.commit()
         flash("UPI payment QR generated.", "success")
         return redirect(url_for("upi_qr.list_view"))
@@ -68,7 +77,7 @@ def generate():
 @login_required
 def download_qr(item_id):
     """Download the payment QR PNG, named after the payee or UPI ID."""
-    record = UpiQR.query.get_or_404(item_id)
+    record = get_owned_or_404(UpiQR, item_id)
     label = record.payee_name or record.upi_id
     return send_from_directory(
         current_app.config["QR_DIR"],
@@ -81,9 +90,8 @@ def download_qr(item_id):
 @upi_qr_bp.route("/<int:item_id>/delete", methods=["POST"])
 @login_required
 def delete(item_id):
-    record = UpiQR.query.get_or_404(item_id)
-    delete_if_exists(os.path.join(current_app.config["QR_DIR"], record.qr_filename))
-    db.session.delete(record)
+    record = get_owned_or_404(UpiQR, item_id)
+    delete_upi_qr(record)
     db.session.commit()
     flash("UPI QR code deleted.", "info")
     return redirect(url_for("upi_qr.list_view"))

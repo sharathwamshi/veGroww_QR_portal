@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "_macros.html" as m with context %}
 {% block title %}ID Card Batches{% endblock %}
 {% block content %}
 
@@ -7,11 +8,17 @@
     <h1>ID Card Generator</h1>
     <p class="subtitle">Group employees into batches. Company name, address, logo and signature are set once per batch.</p>
   </div>
-  <a href="{{ url_for('id_cards.batch_new') }}" class="btn btn-primary">+ New Batch</a>
+  <div class="header-actions">
+    {{ m.quota_meter('id_cards') }}
+    {{ m.new_button('id_cards', url_for('id_cards.batch_new'), '+ New batch', check_limit=False) }}
+  </div>
 </div>
+
+{{ m.limit_notice('id_cards') }}
 
 <div class="panel">
   {% if batches %}
+  <div class="table-wrap">
   <table>
     <thead>
       <tr><th>Batch</th><th>Company</th><th>Employees</th><th>Generated</th><th>Created</th><th style="text-align:right;">Actions</th></tr>
@@ -34,8 +41,9 @@
         <td>{{ b.created_at.strftime('%d %b %Y') }}</td>
         <td style="text-align:right;">
           <a href="{{ url_for('id_cards.batch_view', batch_id=b.id) }}" class="btn btn-outline btn-sm">Open</a>
-          <a href="{{ url_for('id_cards.batch_edit', batch_id=b.id) }}" class="btn btn-outline btn-sm">Edit</a>
-          <form method="POST" action="{{ url_for('id_cards.batch_delete', batch_id=b.id) }}" style="display:inline;" onsubmit="return confirm('Delete this batch and all its employee records? This cannot be undone.');">
+          <a href="{{ url_for('id_cards.batch_edit', batch_id=b.id) }}" class="btn btn-outline btn-sm" data-write>Edit</a>
+          <form method="POST" action="{{ url_for('id_cards.batch_delete', batch_id=b.id) }}" style="display:inline;" data-confirm="Delete this batch and all its employee records? This cannot be undone.">
+{{ csrf_field() }}
             <button type="submit" class="btn btn-danger btn-sm">Delete</button>
           </form>
         </td>
@@ -43,11 +51,12 @@
       {% endfor %}
     </tbody>
   </table>
+  </div>
   {% else %}
   <div class="empty-state">
     <div class="icon">&#127915;</div>
     <p>No batches yet. A batch holds one company's branding (name, address, logo, signature) and its employees.</p>
-    <a href="{{ url_for('id_cards.batch_new') }}" class="btn btn-primary">Create your first batch</a>
+    <a href="{{ url_for('id_cards.batch_new') }}" class="btn btn-primary" data-write>Create your first batch</a>
   </div>
   {% endif %}
 </div>

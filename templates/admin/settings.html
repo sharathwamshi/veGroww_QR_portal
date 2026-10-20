@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% from "admin/_access_grid.html" import access_grid with context %}
+{% block title %}Access settings &mdash; {{ app_name }}{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Access settings</h1>
+    <p class="subtitle">Decide who can join, and what a new account gets.</p>
+  </div>
+  <div><a href="{{ url_for('admin.users') }}" class="btn btn-outline">Manage users</a></div>
+</div>
+
+<form method="POST" data-dirty-guard>
+  {{ csrf_field() }}
+
+  <section class="panel">
+    <h2>Who can create an account</h2>
+    <p class="panel-intro">The sign-up page follows this setting. You can always add people yourself from Users.</p>
+    <div class="choice-cards">
+      {% for value, title, desc in [
+          ('approval', 'Anyone can request, I approve', 'People sign up, then wait until you approve them in Users. Recommended.'),
+          ('open', 'Anyone can join', 'New accounts are active straight away.'),
+          ('closed', 'Closed', 'The sign-up page is turned off. Only you can add accounts.')] %}
+      <label class="choice-card {{ 'is-selected' if mode == value }}">
+        <input type="radio" name="signup_mode" value="{{ value }}" {{ 'checked' if mode == value }} data-choice-radio>
+        <span class="choice-title">{{ title }}</span>
+        <span class="choice-desc">{{ desc }}</span>
+      </label>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>New user defaults</h2>
+    <p class="panel-intro">
+      Every account created from now on starts with these features and limits.
+      Existing accounts are <strong>not</strong> changed &mdash; to give someone the new defaults, open them in Users and choose
+      <em>Reset to defaults</em>.
+    </p>
+    {{ access_grid(defaults, period, total) }}
+  </section>
+
+  <div class="form-actions sticky-actions">
+    <button type="submit" class="btn btn-primary">Save settings</button>
+    <span class="hint dirty-hint" data-dirty-hint hidden>You have unsaved changes.</span>
+  </div>
+</form>
+
+{% endblock %}

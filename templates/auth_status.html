@@ -1,0 +1,29 @@
+{% extends "_auth_layout.html" %}
+{% block title %}Account status &mdash; {{ app_name }}{% endblock %}
+{% block card %}
+
+{% if kind == 'submitted' %}
+  <div class="status-icon is-ok" aria-hidden="true">&#10003;</div>
+  <h2>Request received</h2>
+  <p class="sub">
+    Thanks, {{ user.name.split()[0] }}. Your account for <strong>{{ user.email }}</strong> is waiting for an
+    administrator to approve it. Once it's approved, sign in with the email and password you just chose.
+  </p>
+{% elif kind == 'pending' %}
+  <div class="status-icon is-wait" aria-hidden="true">&#8987;</div>
+  <h2>Waiting for approval</h2>
+  <p class="sub">
+    Your account is set up, but an administrator hasn't approved it yet. You'll be able to sign in as soon
+    as they do. If it's urgent, contact your administrator directly.
+  </p>
+{% elif kind == 'disabled' %}
+  <div class="status-icon is-stop" aria-hidden="true">&#9888;</div>
+  <h2>This account is disabled</h2>
+  <p class="sub">
+    You can't sign in right now. Any pages and QR codes you published are still online.
+    Contact your administrator to have the account turned back on.
+  </p>
+{% endif %}
+
+<a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-block">Back to sign in</a>
+{% endblock %}

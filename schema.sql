@@ -1,5 +1,5 @@
 -- =====================================================================
--- Vegroww QR & ID Card Portal - MySQL schema (import-ready)
+-- QR Saathi (powered by Akruthi India) - MySQL schema (import-ready)
 --
 -- Import via CLI:
 --     mysql -u root -p < schema.sql
@@ -10,8 +10,12 @@
 --     not allow CREATE DATABASE, comment out the two lines marked
 --     [PANEL] below, select your database first, then import.
 --
--- Table/column definitions here mirror models/ exactly, so the app runs
--- against this schema with AUTO_CREATE_TABLES=0 in .env.
+-- FRESH INSTALL: import this file, THEN import
+-- migrations/001_multi_user_accounts.sql, which adds the user-account
+-- tables and the owner column. Together they mirror models/ exactly, so
+-- the app runs with AUTO_CREATE_TABLES=0 in .env.
+--
+-- EXISTING INSTALL: do NOT re-import this file. Only import the migration.
 -- =====================================================================
 
 SET NAMES utf8mb4;

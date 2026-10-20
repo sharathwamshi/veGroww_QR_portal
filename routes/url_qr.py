@@ -4,8 +4,12 @@ import re
 from flask import (Blueprint, current_app, flash, redirect, render_template,
                    request, send_from_directory, url_for)
 
+from flask import g
+
 from extensions import db
 from models import UrlQR
+from utils.access import get_owned_or_404, limit_response, owned, record_usage
+from utils.cleanup import delete_url_qr
 from utils.decorators import login_required
 from utils.file_helpers import delete_if_exists, safe_download_name
 from utils.qr_utils import save_qr_for_url
@@ -28,13 +32,17 @@ def _normalise(raw_url: str) -> str:
 @url_qr_bp.route("/")
 @login_required
 def list_view():
-    items = UrlQR.query.order_by(UrlQR.created_at.desc()).all()
+    items = owned(UrlQR).order_by(UrlQR.created_at.desc()).all()
     return render_template("url_qr/list.html", items=items)
 
 
 @url_qr_bp.route("/new", methods=["GET", "POST"])
 @login_required
 def create():
+    blocked = limit_response("url_qr")
+    if blocked:
+        return blocked
+
     if request.method == "POST":
         name = request.form.get("name", "").strip()
         target_url = _normalise(request.form.get("target_url", ""))
@@ -51,12 +59,14 @@ def create():
             target_url, current_app.config["QR_DIR"], filename_prefix="urlqr"
         )
         record = UrlQR(
+            owner_id=g.user.id,
             name=name[:150],
             target_url=long_url[:1000],
             short_url=short_url,
             qr_filename=qr_filename,
         )
         db.session.add(record)
+        record_usage(g.user, "url_qr")
         db.session.commit()
 
         flash(f'QR code created for "{record.name}".', "success")
@@ -68,7 +78,7 @@ def create():
 @url_qr_bp.route("/<int:item_id>/edit", methods=["GET", "POST"])
 @login_required
 def edit(item_id):
-    item = UrlQR.query.get_or_404(item_id)
+    item = get_owned_or_404(UrlQR, item_id)
 
     if request.method == "POST":
         name = request.form.get("name", "").strip()
@@ -106,7 +116,7 @@ def edit(item_id):
 @url_qr_bp.route("/<int:item_id>/regenerate", methods=["POST"])
 @login_required
 def regenerate(item_id):
-    item = UrlQR.query.get_or_404(item_id)
+    item = get_owned_or_404(UrlQR, item_id)
     delete_if_exists(os.path.join(current_app.config["QR_DIR"], item.qr_filename))
     qr_filename, long_url, short_url = save_qr_for_url(
         item.target_url, current_app.config["QR_DIR"], filename_prefix="urlqr"
@@ -121,7 +131,7 @@ def regenerate(item_id):
 @url_qr_bp.route("/<int:item_id>/qr")
 @login_required
 def download_qr(item_id):
-    item = UrlQR.query.get_or_404(item_id)
+    item = get_owned_or_404(UrlQR, item_id)
     return send_from_directory(
         current_app.config["QR_DIR"],
         item.qr_filename,
@@ -133,9 +143,8 @@ def download_qr(item_id):
 @url_qr_bp.route("/<int:item_id>/delete", methods=["POST"])
 @login_required
 def delete(item_id):
-    item = UrlQR.query.get_or_404(item_id)
-    delete_if_exists(os.path.join(current_app.config["QR_DIR"], item.qr_filename))
-    db.session.delete(item)
+    item = get_owned_or_404(UrlQR, item_id)
+    delete_url_qr(item)
     db.session.commit()
     flash("QR code deleted.", "info")
     return redirect(url_for("url_qr.list_view"))

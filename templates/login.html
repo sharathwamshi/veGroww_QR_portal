@@ -1,57 +1,41 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Log in &mdash; {{ app_name }}</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-</head>
-<body>
-  <div class="login-wrap">
-    <div class="login-visual">
-      <div class="logo-mark">VG</div>
-      <h1>QR Code Generator powered by Vegroww</h1>
-      <p>
-        A single portal to issue employee ID cards, generate QR codes for
-        any image, and create UPI payment QR codes &mdash; built for teams
-        who need a fast, self-hosted way to manage identity and access.
-      </p>
-      <div class="feature-list">
-        <div class="feature"><span class="dot"></span> Bulk-generate employee ID cards from a spreadsheet, complete with photos and verification QR codes.</div>
-        <div class="feature"><span class="dot"></span> Turn any image into a scannable, shareable QR code in seconds.</div>
-        <div class="feature"><span class="dot"></span> Create UPI payment QR codes with an optional fixed amount.</div>
-        <div class="feature"><span class="dot"></span> Everything is stored locally &mdash; no third-party cloud dependency.</div>
-      </div>
-    </div>
+{% extends "_auth_layout.html" %}
+{% block title %}Sign in &mdash; {{ app_name }}{% endblock %}
+{% block card %}
+<h2>Welcome back</h2>
+<p class="sub">Sign in to manage your QR codes, cards and pages.</p>
 
-    <div class="login-form-side">
-      <div class="login-card">
-        <h2>Welcome back</h2>
-        <p class="sub">Sign in to manage ID cards and QR codes.</p>
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for category, message in messages %}
+    <div class="flash flash-{{ category }}" role="{{ 'alert' if category == 'error' else 'status' }}">{{ message }}</div>
+  {% endfor %}
+{% endwith %}
 
-        {% with messages = get_flashed_messages(with_categories=true) %}
-          {% if messages %}
-            {% for category, message in messages %}
-              <div class="flash flash-{{ category }}">{{ message }}</div>
-            {% endfor %}
-          {% endif %}
-        {% endwith %}
-
-        <form method="POST" action="{{ url_for('auth.login') }}">
-          <div class="form-group">
-            <label for="username">Username</label>
-            <input type="text" id="username" name="username" placeholder="Enter your username" required autofocus>
-          </div>
-          <div class="form-group">
-            <label for="password">Password</label>
-            <input type="password" id="password" name="password" placeholder="Enter your password" required>
-          </div>
-          <button type="submit" class="btn btn-primary btn-block">Sign In</button>
-        </form>
-
-        <div class="login-footer-note">&copy; {{ app_tagline }}</div>
-      </div>
+<form method="POST" action="{{ url_for('auth.login', next=next_url) if next_url else url_for('auth.login') }}" novalidate>
+  {{ csrf_field() }}
+  <div class="form-group">
+    <label for="identifier">Email or username</label>
+    <input type="text" id="identifier" name="identifier" value="{{ identifier or '' }}"
+           placeholder="you@company.com" autocomplete="username" autocapitalize="none" spellcheck="false" required autofocus>
+  </div>
+  <div class="form-group">
+    <label for="password">Password</label>
+    <div class="password-field">
+      <input type="password" id="password" name="password" placeholder="Your password"
+             autocomplete="current-password" required>
+      <button type="button" class="password-toggle" data-password-toggle="password" aria-label="Show password">Show</button>
     </div>
   </div>
-</body>
-</html>
+  <label class="checkbox-row remember-row">
+    <input type="checkbox" name="remember"> Keep me signed in on this device
+  </label>
+  <button type="submit" class="btn btn-primary btn-block">Sign in</button>
+</form>
+
+<p class="auth-help">Forgot your password? Your administrator can reset it for you.</p>
+
+{% if signup_mode != 'closed' %}
+<div class="auth-switch">
+  New here? <a href="{{ url_for('auth.signup') }}">Create an account</a>
+</div>
+{% endif %}
+{% endblock %}

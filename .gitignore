@@ -1,0 +1,19 @@
+# Secrets - never commit. Copy env.example to .env and fill it in.
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+
+# User uploads and generated files (keep the folder placeholders)
+static/uploads/**
+!static/uploads/*/
+!static/uploads/*/.gitkeep
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

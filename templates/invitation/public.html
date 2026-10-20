@@ -20,7 +20,7 @@
 
   {% if is_preview %}
   <div class="vc-preview-bar">
-    Preview &middot; <a href="{{ url_for('invitation.edit', invitation_id=inv.id) }}">Edit</a>
+    Preview &middot; <a href="{{ url_for('invitation.edit', invitation_id=inv.id) }}" data-write>Edit</a>
     &middot; <a href="{{ url_for('invitation.list_view') }}">All invitations</a>
   </div>
   {% endif %}

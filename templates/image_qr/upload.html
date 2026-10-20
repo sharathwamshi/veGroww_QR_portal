@@ -12,6 +12,7 @@
 
 <div class="panel" style="max-width:560px;">
   <form method="POST" enctype="multipart/form-data">
+{{ csrf_field() }}
     <div class="form-group">
       <label for="title">Title (optional)</label>
       <input type="text" id="title" name="title" placeholder="e.g. Event Banner, Product Photo">

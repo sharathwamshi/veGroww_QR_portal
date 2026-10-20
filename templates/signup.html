@@ -1,0 +1,65 @@
+{% extends "_auth_layout.html" %}
+{% block title %}Create an account &mdash; {{ app_name }}{% endblock %}
+{% block card %}
+
+{% if closed %}
+  <h2>Sign-ups are closed</h2>
+  <p class="sub">New accounts aren't being accepted right now. If you need access, contact your administrator and they can create an account for you.</p>
+  <a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-block">Back to sign in</a>
+{% else %}
+  <h2>Create your account</h2>
+  <p class="sub">
+    {% if mode == 'approval' %}
+      Fill in your details. An administrator will review your request, and you can sign in once it's approved.
+    {% else %}
+      It takes a minute. You'll be signed in straight away.
+    {% endif %}
+  </p>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="flash flash-{{ category }}" role="{{ 'alert' if category == 'error' else 'status' }}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <form method="POST" action="{{ url_for('auth.signup') }}" novalidate>
+    {{ csrf_field() }}
+    <div class="form-group">
+      <label for="name">Full name</label>
+      <input type="text" id="name" name="name" value="{{ form.name if form else '' }}"
+             placeholder="E.g. Priya Nair" autocomplete="name" required autofocus>
+    </div>
+    <div class="form-group">
+      <label for="email">Work email</label>
+      <input type="email" id="email" name="email" value="{{ form.email if form else '' }}"
+             placeholder="you@company.com" autocomplete="email" autocapitalize="none" spellcheck="false" required>
+      <p class="hint">You'll use this to sign in.</p>
+    </div>
+    <div class="form-group">
+      <label for="password">Password</label>
+      <div class="password-field">
+        <input type="password" id="password" name="password" autocomplete="new-password"
+               placeholder="At least 8 characters" required data-password-meter>
+        <button type="button" class="password-toggle" data-password-toggle="password" aria-label="Show password">Show</button>
+      </div>
+      <ul class="password-rules" data-password-rules>
+        <li data-rule="length">At least 8 characters</li>
+        <li data-rule="mix">A letter and a number</li>
+      </ul>
+    </div>
+    <div class="form-group">
+      <label for="confirm_password">Confirm password</label>
+      <input type="password" id="confirm_password" name="confirm_password" autocomplete="new-password"
+             placeholder="Type it again" required data-password-confirm="password">
+      <p class="hint field-error" data-confirm-hint hidden>The passwords don't match yet.</p>
+    </div>
+    <button type="submit" class="btn btn-primary btn-block">
+      {{ 'Request account' if mode == 'approval' else 'Create account' }}
+    </button>
+  </form>
+
+  <div class="auth-switch">
+    Already have an account? <a href="{{ url_for('auth.login') }}">Sign in</a>
+  </div>
+{% endif %}
+{% endblock %}

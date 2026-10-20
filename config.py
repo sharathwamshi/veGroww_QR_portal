@@ -1,5 +1,5 @@
 """
-Configuration for the Vegroww QR & ID Card Portal.
+Configuration for QR Saathi (powered by Akruthi India).
 
 Every value is driven by environment variables, which are loaded from a
 `.env` file sitting next to this module (see `.env.example`). Real
@@ -55,7 +55,14 @@ class Config:
     # ---------------------------------------------------------------
     # Core Flask
     # ---------------------------------------------------------------
-    SECRET_KEY = _env_str("SECRET_KEY", "vegroww-qr-portal-change-this-secret-key")
+    DEFAULT_SECRET_KEY = "qr-saathi-change-this-secret-key"
+    SECRET_KEY = _env_str("SECRET_KEY", DEFAULT_SECRET_KEY)
+
+    # Session cookie: set SESSION_COOKIE_SECURE=1 once the portal is served
+    # only over https (it stops the cookie being sent over plain http).
+    SESSION_COOKIE_SECURE = _env_bool("SESSION_COOKIE_SECURE", False)
+    # How long "Keep me signed in" lasts
+    REMEMBER_ME_DAYS = _env_int("REMEMBER_ME_DAYS", 30)
 
     # Dev server only (wsgi.py / gunicorn ignore these)
     FLASK_DEBUG = _env_bool("FLASK_DEBUG", True)
@@ -94,10 +101,13 @@ class Config:
     AUTO_CREATE_TABLES = _env_bool("AUTO_CREATE_TABLES", True)
 
     # ---------------------------------------------------------------
-    # Static login (single admin account, no user table / signup flow)
+    # Admin bootstrap. Used ONCE: on first start-up, if no admin account
+    # exists yet, one is created with these credentials. After that the
+    # admin password lives (hashed) in the database and is changed from
+    # My account -> Password; editing these values has no further effect.
     # ---------------------------------------------------------------
     ADMIN_USERNAME = _env_str("ADMIN_USERNAME", "admin")
-    ADMIN_PASSWORD = _env_raw("ADMIN_PASSWORD", "Vegroww@123")
+    ADMIN_PASSWORD = _env_raw("ADMIN_PASSWORD", "ChangeMe@123")
 
     # ---------------------------------------------------------------
     # Local file storage (no cloud storage - everything on disk)
@@ -135,5 +145,5 @@ class Config:
     # ---------------------------------------------------------------
     # Branding
     # ---------------------------------------------------------------
-    APP_NAME = _env_str("APP_NAME", "Vegroww QR Portal")
-    APP_TAGLINE = _env_str("APP_TAGLINE", "QR Code Generator powered by Vegroww")
+    APP_NAME = _env_str("APP_NAME", "QR Saathi")
+    APP_TAGLINE = _env_str("APP_TAGLINE", "Powered by Akruthi India")

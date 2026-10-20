@@ -5,8 +5,12 @@ from datetime import datetime
 from flask import (Blueprint, Response, current_app, flash, redirect,
                    render_template, request, send_from_directory, url_for)
 
+from flask import g
+
 from extensions import db
 from models import Invitation
+from utils.access import get_owned_or_404, limit_response, owned, record_usage
+from utils.cleanup import delete_invitation
 from utils.decorators import login_required
 from utils.url_helpers import public_url_for
 from utils.event_types import EVENT_TYPES, event_meta, grouped_events
@@ -178,15 +182,19 @@ def _regenerate_qr(invitation):
 @invitation_bp.route("/")
 @login_required
 def list_view():
-    invitations = Invitation.query.order_by(Invitation.primary_start.desc()).all()
+    invitations = owned(Invitation).order_by(Invitation.primary_start.desc()).all()
     return render_template("invitation/list.html", invitations=invitations)
 
 
 @invitation_bp.route("/new", methods=["GET", "POST"])
 @login_required
 def create():
+    blocked = limit_response("invitation")
+    if blocked:
+        return blocked
+
     if request.method == "POST":
-        invitation = Invitation()
+        invitation = Invitation(owner_id=g.user.id)
         error = _apply(invitation, request.form, request.files, is_new=True)
         if error:
             flash(error, "error")
@@ -197,6 +205,7 @@ def create():
         db.session.add(invitation)
         db.session.flush()
         _regenerate_qr(invitation)
+        record_usage(g.user, "invitation")
         db.session.commit()
 
         flash(f"Invitation created for {invitation.headline}.", "success")
@@ -208,7 +217,7 @@ def create():
 @invitation_bp.route("/<int:invitation_id>/edit", methods=["GET", "POST"])
 @login_required
 def edit(invitation_id):
-    invitation = Invitation.query.get_or_404(invitation_id)
+    invitation = get_owned_or_404(Invitation, invitation_id)
 
     if request.method == "POST":
         error = _apply(invitation, request.form, request.files, is_new=False)
@@ -228,7 +237,7 @@ def edit(invitation_id):
 @invitation_bp.route("/<int:invitation_id>/regenerate", methods=["POST"])
 @login_required
 def regenerate(invitation_id):
-    invitation = Invitation.query.get_or_404(invitation_id)
+    invitation = get_owned_or_404(Invitation, invitation_id)
     _regenerate_qr(invitation)
     db.session.commit()
     flash("QR code regenerated.", "success")
@@ -238,14 +247,8 @@ def regenerate(invitation_id):
 @invitation_bp.route("/<int:invitation_id>/delete", methods=["POST"])
 @login_required
 def delete(invitation_id):
-    invitation = Invitation.query.get_or_404(invitation_id)
-    if invitation.hero_filename:
-        delete_if_exists(
-            os.path.join(current_app.config["INVITE_IMAGE_DIR"], invitation.hero_filename)
-        )
-    if invitation.qr_filename:
-        delete_if_exists(os.path.join(current_app.config["QR_DIR"], invitation.qr_filename))
-    db.session.delete(invitation)
+    invitation = get_owned_or_404(Invitation, invitation_id)
+    delete_invitation(invitation)
     db.session.commit()
     flash("Invitation deleted. Its page and QR no longer resolve.", "info")
     return redirect(url_for("invitation.list_view"))
@@ -254,7 +257,7 @@ def delete(invitation_id):
 @invitation_bp.route("/<int:invitation_id>/qr")
 @login_required
 def download_qr(invitation_id):
-    invitation = Invitation.query.get_or_404(invitation_id)
+    invitation = get_owned_or_404(Invitation, invitation_id)
     if not invitation.qr_filename:
         flash("This invitation has no QR code yet — regenerate it first.", "error")
         return redirect(url_for("invitation.list_view"))
@@ -269,7 +272,7 @@ def download_qr(invitation_id):
 @invitation_bp.route("/preview/<int:invitation_id>")
 @login_required
 def preview(invitation_id):
-    invitation = Invitation.query.get_or_404(invitation_id)
+    invitation = get_owned_or_404(Invitation, invitation_id)
     return render_template(
         "invitation/public.html",
         inv=invitation,

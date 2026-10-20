@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Not available &mdash; {{ app_name }}{% endblock %}
+{% block content %}
+{% set meta = modules[module] %}
+<div class="panel state-panel">
+  <div class="state-icon" aria-hidden="true">{{ meta.icon|safe }}</div>
+  <h1>{{ meta.label }} isn't switched on for your account</h1>
+  <p>
+    Your administrator decides which features each account can use.
+    If you need {{ meta.label }}, ask them to enable it &mdash; it will appear in your menu straight away.
+  </p>
+  <a href="{{ url_for('dashboard.home') }}" class="btn btn-primary">Back to dashboard</a>
+</div>
+{% endblock %}

@@ -1,60 +1,114 @@
 {% extends "base.html" %}
+{% import "_macros.html" as m with context %}
 {% block title %}Dashboard &mdash; {{ app_name }}{% endblock %}
 {% block content %}
 
 <div class="page-header">
   <div>
-    <h1>Dashboard</h1>
-    <p class="subtitle">Overview of ID cards and QR codes generated across the portal.</p>
+    <h1>Hello, {{ current_user.name.split()[0] }}</h1>
+    <p class="subtitle">
+      {% if current_user.is_admin %}Your own work, plus a summary of every account on the portal.
+      {% else %}Everything you've created, in one place. Only you can see it.{% endif %}
+    </p>
   </div>
 </div>
 
-<div class="stat-grid">
-  <div class="stat-card">
-    <div class="value">{{ stats.batches }}</div>
-    <div class="label">ID Card Batches</div>
+{# ------------------------------------------------------------------
+   Admin overview
+   ------------------------------------------------------------------ #}
+{% if admin %}
+<section class="panel admin-overview">
+  <div class="section-toolbar">
+    <h2 style="margin:0;">Accounts</h2>
+    <div class="btn-row">
+      <a href="{{ url_for('admin.users') }}" class="btn btn-outline btn-sm">Manage users</a>
+      <a href="{{ url_for('admin.settings') }}" class="btn btn-ghost btn-sm">Access settings</a>
+    </div>
   </div>
-  <div class="stat-card">
-    <div class="value">{{ stats.total_cards }}</div>
-    <div class="label">Total Employees</div>
-  </div>
-  <div class="stat-card">
-    <div class="value">{{ stats.generated_cards }}</div>
-    <div class="label">Cards Generated</div>
-  </div>
-  <div class="stat-card">
-    <div class="value">{{ stats.pending_cards }}</div>
-    <div class="label">Pending Photo / Generation</div>
-  </div>
-  <div class="stat-card">
-    <div class="value">{{ stats.image_qrs }}</div>
-    <div class="label">Image QR Codes</div>
-  </div>
-  <div class="stat-card">
-    <div class="value">{{ stats.upi_qrs }}</div>
-    <div class="label">UPI Payment QR Codes</div>
-  </div>
-  <div class="stat-card">
-    <div class="value">{{ stats.vcards }}</div>
-    <div class="label">Digital vCards</div>
-  </div>
-  <div class="stat-card">
-    <div class="value">{{ stats.url_qrs }}</div>
-    <div class="label">URL QR Codes</div>
-  </div>
-  <div class="stat-card">
-    <div class="value">{{ stats.invitations }}</div>
-    <div class="label">Invitations</div>
-  </div>
-</div>
 
+  <div class="mini-stats">
+    <div><span class="v">{{ admin.users }}</span><span class="l">Users</span></div>
+    <div><span class="v">{{ admin.active }}</span><span class="l">Active</span></div>
+    <div class="{{ 'is-attention' if admin.pending }}"><span class="v">{{ admin.pending|length }}</span><span class="l">Awaiting approval</span></div>
+    <div><span class="v">{{ admin.new_week }}</span><span class="l">Joined this week</span></div>
+    <div><span class="v">{{ admin.disabled }}</span><span class="l">Disabled</span></div>
+  </div>
+
+  <p class="hint" style="margin:14px 0 0;">
+    Sign-ups are currently
+    <strong>{{ {'open': 'open to anyone', 'approval': 'open, with your approval', 'closed': 'closed'}[admin.signup_mode] }}</strong>.
+    <a href="{{ url_for('admin.settings') }}">Change</a>
+  </p>
+
+  {% if admin.pending %}
+  <h3 class="sub-heading">Waiting for your approval</h3>
+  <ul class="approval-list">
+    {% for u in admin.pending[:6] %}
+    <li>
+      <span class="avatar sm">{{ u.initials }}</span>
+      <span class="who"><strong>{{ u.name }}</strong><span>{{ u.email }} &middot; requested {{ u.created_at.strftime('%d %b, %I:%M %p') if u.created_at }}</span></span>
+      <form method="POST" action="{{ url_for('admin.user_status', user_id=u.id) }}">
+        {{ csrf_field() }}
+        <input type="hidden" name="status" value="active"><input type="hidden" name="back" value="dashboard">
+        <button type="submit" class="btn btn-primary btn-sm">Approve</button>
+      </form>
+      <a href="{{ url_for('admin.user_detail', user_id=u.id) }}" class="btn btn-ghost btn-sm">Review</a>
+    </li>
+    {% endfor %}
+  </ul>
+  {% if admin.pending|length > 6 %}<a href="{{ url_for('admin.users', status='pending') }}" class="hint">See all {{ admin.pending|length }} requests</a>{% endif %}
+  {% endif %}
+
+  {% if admin.near_limit %}
+  <h3 class="sub-heading">Close to their limits</h3>
+  <ul class="approval-list">
+    {% for u, items in admin.near_limit %}
+    <li>
+      <span class="avatar sm">{{ u.initials }}</span>
+      <span class="who"><strong>{{ u.name }}</strong>
+        <span>{% for q in items %}{{ modules[q.module].short }} {{ q.used }}/{{ q.limit }}{{ ', ' if not loop.last }}{% endfor %}</span></span>
+      <a href="{{ url_for('admin.user_detail', user_id=u.id) }}#access" class="btn btn-outline btn-sm">Adjust limits</a>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</section>
+{% endif %}
+
+{# ------------------------------------------------------------------
+   Your modules
+   ------------------------------------------------------------------ #}
+{% if tiles %}
+{% if admin %}<h2 class="section-label">Your work</h2>{% endif %}
+<div class="module-grid">
+  {% for t in tiles %}
+  <a class="module-tile {{ '' if t.enabled else 'is-readonly' }}" href="{{ url_for(t.meta.endpoint) }}">
+    <div class="module-tile-head">
+      <span class="module-icon" aria-hidden="true">{{ t.meta.icon|safe }}</span>
+      <span class="module-name">{{ t.meta.label }}</span>
+      {% if not t.enabled %}<span class="badge badge-muted">View only</span>{% endif %}
+    </div>
+    <div class="module-count">{{ t.count }}</div>
+    <div class="module-unit">{{ t.meta.unit_one if t.count == 1 else t.meta.unit }}</div>
+    {% if t.enabled %}{{ m.quota_meter(t.key, compact=True) }}{% endif %}
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="panel state-panel">
+  <div class="state-icon" aria-hidden="true">&#128274;</div>
+  <h1>No features are switched on yet</h1>
+  <p>Your account is ready, but your administrator hasn't enabled any features for it. Once they do, they'll appear here and in the menu.</p>
+</div>
+{% endif %}
+
+{% if recent_batches %}
 <div class="panel">
   <div class="section-toolbar">
-    <h2 style="margin:0;">Recent Batches</h2>
-    <a href="{{ url_for('id_cards.batch_new') }}" class="btn btn-primary btn-sm">+ New Batch</a>
+    <h2 style="margin:0;">Recent ID card batches</h2>
+    {{ m.new_button('id_cards', url_for('id_cards.batch_new'), '+ New batch', 'btn-sm', check_limit=False) }}
   </div>
-
-  {% if recent_batches %}
+  <div class="table-wrap">
   <table>
     <thead>
       <tr><th>Batch</th><th>Company</th><th>Employees</th><th>Generated</th><th></th></tr>
@@ -66,31 +120,13 @@
         <td>{{ b.company_name }}</td>
         <td>{{ b.total_cards }}</td>
         <td>{{ b.generated_cards }} / {{ b.total_cards }}</td>
-        <td><a href="{{ url_for('id_cards.batch_view', batch_id=b.id) }}" class="btn btn-outline btn-sm">Open</a></td>
+        <td style="text-align:right;"><a href="{{ url_for('id_cards.batch_view', batch_id=b.id) }}" class="btn btn-outline btn-sm">Open</a></td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
-  {% else %}
-  <div class="empty-state">
-    <div class="icon">&#128193;</div>
-    <p>No batches yet. Create your first batch to start issuing ID cards.</p>
-    <a href="{{ url_for('id_cards.batch_new') }}" class="btn btn-primary">Create a Batch</a>
-  </div>
-  {% endif %}
-</div>
-
-<div class="stat-grid" style="grid-template-columns: repeat(auto-fit, minmax(260px,1fr));">
-  <div class="panel" style="margin-bottom:0;">
-    <h3>Image QR</h3>
-    <p style="color:var(--slate); font-size:13.5px;">Upload any image and get a scannable QR code that opens it.</p>
-    <a href="{{ url_for('image_qr.upload') }}" class="btn btn-outline btn-sm">Generate Image QR</a>
-  </div>
-  <div class="panel" style="margin-bottom:0;">
-    <h3>UPI Payment QR</h3>
-    <p style="color:var(--slate); font-size:13.5px;">Create a QR code for a UPI ID, with an optional fixed amount.</p>
-    <a href="{{ url_for('upi_qr.generate') }}" class="btn btn-outline btn-sm">Generate UPI QR</a>
   </div>
 </div>
+{% endif %}
 
 {% endblock %}

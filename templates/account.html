@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}My account &mdash; {{ app_name }}{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>My account</h1>
+    <p class="subtitle">Your profile, password, and what your account can do.</p>
+  </div>
+</div>
+
+<div class="two-col">
+  <div>
+    <section class="panel">
+      <h2>Profile</h2>
+      <form method="POST" action="{{ url_for('account.update_profile') }}">
+        {{ csrf_field() }}
+        <div class="form-group">
+          <label for="name">Full name</label>
+          <input type="text" id="name" name="name" value="{{ current_user.name }}" required autocomplete="name">
+        </div>
+        {% if current_user.is_admin %}
+        <div class="form-group">
+          <label>Username</label>
+          <div class="readonly-value">{{ current_user.username }}</div>
+          <p class="hint">You sign in with this username. It was set when the portal was first installed.</p>
+        </div>
+        <div class="form-group">
+          <label for="email">Email (optional)</label>
+          <input type="email" id="email" name="email" value="{{ current_user.email or '' }}" autocomplete="email">
+          <p class="hint">If you add one, you can sign in with it too.</p>
+        </div>
+        {% else %}
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" value="{{ current_user.email or '' }}" required autocomplete="email">
+          <p class="hint">This is what you sign in with. If you change it, use the new address next time.</p>
+        </div>
+        {% endif %}
+        <button type="submit" class="btn btn-primary">Save profile</button>
+      </form>
+    </section>
+
+    <section class="panel" id="password">
+      <h2>Password</h2>
+      <p class="panel-intro">Changing your password signs you out on every other device.</p>
+      <form method="POST" action="{{ url_for('account.change_password') }}" autocomplete="off">
+        {{ csrf_field() }}
+        <div class="form-group">
+          <label for="current_password">Current password</label>
+          <div class="password-field">
+            <input type="password" id="current_password" name="current_password" required autocomplete="current-password">
+            <button type="button" class="password-toggle" data-password-toggle="current_password" aria-label="Show password">Show</button>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="new_password">New password</label>
+            <div class="password-field">
+              <input type="password" id="new_password" name="new_password" required autocomplete="new-password" data-password-meter>
+              <button type="button" class="password-toggle" data-password-toggle="new_password" aria-label="Show password">Show</button>
+            </div>
+            <ul class="password-rules" data-password-rules>
+              <li data-rule="length">At least 8 characters</li>
+              <li data-rule="mix">A letter and a number</li>
+            </ul>
+          </div>
+          <div class="form-group">
+            <label for="confirm_password">Confirm new password</label>
+            <input type="password" id="confirm_password" name="confirm_password" required autocomplete="new-password"
+                   data-password-confirm="new_password">
+            <p class="hint field-error" data-confirm-hint hidden>The passwords don't match yet.</p>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Change password</button>
+      </form>
+    </section>
+  </div>
+
+  <div>
+    <section class="panel">
+      <h2>What your account includes</h2>
+      {% if current_user.is_admin %}
+        <p class="panel-intro">As the administrator you have every feature with no limits.
+          Control what other accounts get in <a href="{{ url_for('admin.settings') }}">Access settings</a>.</p>
+      {% else %}
+        <p class="panel-intro">
+          Set by your administrator.
+          {% if current_user.limit_period == 'monthly' %}
+            Limits count what you create each calendar month{% if usage and usage[0].resets_on %} and reset on {{ usage[0].resets_on.strftime('%d %b %Y') }}{% endif %}.
+          {% else %}
+            Limits count what you have right now &mdash; deleting something frees up a slot.
+          {% endif %}
+          {% if current_user.total_limit is not none %}
+            Your account also has an overall limit of <strong>{{ current_user.total_limit }}</strong> across all features.
+          {% endif %}
+        </p>
+      {% endif %}
+
+      <ul class="plan-list">
+        {% for q in usage %}
+        {% set meta = modules[q.module] %}
+        <li class="plan-row {{ '' if q.enabled else 'is-off' }}">
+          <span class="plan-icon" aria-hidden="true">{{ meta.icon|safe }}</span>
+          <span class="plan-name">
+            {{ meta.label }}
+            <span class="plan-sub">{{ meta.blurb }}</span>
+          </span>
+          <span class="plan-value">
+            {% if not q.enabled %}
+              <span class="badge badge-muted">Not included</span>
+            {% elif q.limit is none and not q.capped_by_total %}
+              <span class="plan-count">{{ q.used }}</span> <span class="plan-of">used &middot; unlimited</span>
+            {% elif q.limit is none %}
+              <span class="plan-count">{{ q.used }}</span> <span class="plan-of">used</span>
+            {% else %}
+              <span class="plan-count">{{ q.used }}</span> <span class="plan-of">of {{ q.limit }}</span>
+              <span class="quota-bar small {{ 'is-full' if q.at_limit else ('is-near' if q.percent >= 80 else '') }}"><span style="width: {{ q.percent }}%;"></span></span>
+            {% endif %}
+          </span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% if not current_user.is_admin %}
+      <p class="hint" style="margin-top:14px;">Need more? Ask your administrator to raise a limit or switch a feature on.</p>
+      {% endif %}
+    </section>
+  </div>
+</div>
+
+{% endblock %}

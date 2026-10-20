@@ -12,6 +12,7 @@
 
 <div class="panel" style="max-width:560px;">
   <form method="POST">
+{{ csrf_field() }}
     <div class="form-group">
       <label for="upi_id">UPI ID</label>
       <input type="text" id="upi_id" name="upi_id" placeholder="e.g. yourname@okhdfcbank" value="{{ form.upi_id if form else '' }}" required>

@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ app_name }} &mdash; ID cards, vCards, invitations &amp; QR codes in one place</title>
+  <meta name="description" content="Create employee ID cards, digital business cards, event invitations and QR codes for links, images and UPI payments — privately, in your own account.">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="lp-body">
+
+{% set can_signup = signup_mode != 'closed' %}
+{% set signup_label = 'Request an account' if signup_mode == 'approval' else 'Create free account' %}
+
+{# ======================= Top bar ======================= #}
+<header class="lp-nav">
+  <div class="lp-wrap lp-nav-inner">
+    <a href="{{ url_for('dashboard.home') }}" class="lp-brand">
+      <span class="lp-logo">QS</span>
+      <span class="lp-brand-name">{{ app_name }}</span>
+    </a>
+    <nav class="lp-links" aria-label="Page sections">
+      <a href="#tools">Tools</a>
+      <a href="#how">How it works</a>
+      <a href="#private">Privacy</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+    <div class="lp-nav-actions">
+      <a href="{{ url_for('auth.login') }}" class="lp-btn lp-btn-ghost">Log in</a>
+      {% if can_signup %}
+      <a href="{{ url_for('auth.signup') }}" class="lp-btn lp-btn-primary">Sign up</a>
+      {% endif %}
+    </div>
+  </div>
+</header>
+
+<main>
+
+{# ======================= Hero ======================= #}
+<section class="lp-hero">
+  <div class="lp-blob lp-blob-1" aria-hidden="true"></div>
+  <div class="lp-blob lp-blob-2" aria-hidden="true"></div>
+  <div class="lp-blob lp-blob-3" aria-hidden="true"></div>
+
+  <div class="lp-wrap lp-hero-grid">
+    <div class="lp-hero-copy">
+      <span class="lp-eyebrow">Six QR tools &middot; one private account</span>
+      <h1>Make every card, invite and QR code your business needs &mdash; <span class="lp-grad-text">in minutes</span>.</h1>
+      <p class="lp-lead">
+        {{ app_name }} turns your details into ready-to-share pages and printable QR codes:
+        employee ID cards, digital business cards, event invitations, and codes for any website,
+        image or UPI payment. Everything you create stays in your own account.
+      </p>
+
+      <div class="lp-cta-row">
+        {% if can_signup %}
+        <a href="{{ url_for('auth.signup') }}" class="lp-btn lp-btn-primary lp-btn-lg">{{ signup_label }} &rarr;</a>
+        {% endif %}
+        <a href="{{ url_for('auth.login') }}" class="lp-btn lp-btn-light lp-btn-lg">I already have an account</a>
+      </div>
+      <p class="lp-cta-note">
+        {% if signup_mode == 'approval' %}New accounts are reviewed by an administrator &mdash; you'll be able to sign in once approved.
+        {% elif signup_mode == 'open' %}Sign up takes a minute. No card details needed.
+        {% else %}New accounts are created by the administrator. Already have one? Log in above.{% endif %}
+      </p>
+    </div>
+
+    {# Illustrative collage of what the portal produces #}
+    <div class="lp-hero-art" aria-hidden="true">
+      <div class="lp-art-card lp-art-id">
+        <div class="lp-art-id-head"><span class="lp-art-logo"></span><span class="lp-line w60 light"></span></div>
+        <div class="lp-art-avatar">PN</div>
+        <div class="lp-art-name">Priya Nair</div>
+        <div class="lp-art-pill">EMP. CODE: AK-014</div>
+        <div class="lp-art-id-foot">
+          <span><span class="lp-line w70"></span><span class="lp-line w50"></span></span>
+          <span class="lp-art-qr">{% include "_lp_qr.svg" %}</span>
+        </div>
+      </div>
+
+      <div class="lp-art-card lp-art-vcard">
+        <div class="lp-art-vbanner"></div>
+        <div class="lp-art-vavatar">AR</div>
+        <div class="lp-art-vname">Arun Rao</div>
+        <div class="lp-art-vrole">Sales lead &middot; Rao Studio</div>
+        <div class="lp-art-vbtn">+ Add contact</div>
+        <div class="lp-art-vrow"><span class="dot teal"></span><span class="lp-line w70"></span></div>
+        <div class="lp-art-vrow"><span class="dot sky"></span><span class="lp-line w50"></span></div>
+      </div>
+
+      <div class="lp-art-card lp-art-invite">
+        <div class="lp-art-iv-orn">&#10086;</div>
+        <div class="lp-art-iv-title">Wedding Invitation</div>
+        <div class="lp-art-iv-names">Priya &amp; Arun</div>
+        <div class="lp-art-iv-date"><b>12</b> DEC</div>
+      </div>
+
+      <div class="lp-toast lp-toast-1"><span class="ok">&#10003;</span> Contact saved to phone</div>
+      <div class="lp-toast lp-toast-2"><span class="ok">&#10003;</span> Added to calendar</div>
+      <div class="lp-toast lp-toast-3"><span class="upi">&#8377;</span> UPI payment ready</div>
+    </div>
+  </div>
+
+  <div class="lp-wrap">
+    <ul class="lp-proof">
+      <li><strong>6</strong><span>tools in one portal</span></li>
+      <li><strong>1 scan</strong><span>to open, save or pay</span></li>
+      <li><strong>100%</strong><span>private to your account</span></li>
+      <li><strong>Print-ready</strong><span>PNG cards &amp; QR codes</span></li>
+    </ul>
+  </div>
+</section>
+
+{# ======================= Tools ======================= #}
+<section class="lp-section" id="tools">
+  <div class="lp-wrap">
+    <div class="lp-section-head">
+      <span class="lp-kicker">What you can make</span>
+      <h2>Six tools, one simple workflow</h2>
+      <p>Pick a tool, fill in a short form, and get a shareable link plus a QR code you can download, copy or print.</p>
+    </div>
+
+    <div class="lp-tools">
+      {% set tools = [
+        ('indigo', 'ID Card Generator', 'Issue professional employee ID cards in bulk.',
+          ['Import staff from Excel or CSV', 'Company logo, address & signature on every card', 'A QR on each card that opens a live verification page'],
+          '<path d="M3 6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="9" cy="11" r="2.5"/><path d="M5.5 17a3.5 3.5 0 0 1 7 0M15 9h3M15 13h3"/>'),
+        ('teal', 'Digital vCards', 'A business card that lives on a phone.',
+          ['Phones, emails, websites & social profiles', 'One tap saves you straight into their contacts', 'Your colours, photo and company details'],
+          '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>'),
+        ('rose', 'Invitations', 'Event cards guests actually act on.',
+          ['24 occasions — weddings, naming, housewarming, launches…', 'Guests add it to their calendar in one tap', 'Directions open in their own maps app'],
+          '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/><path d="m9.5 15.5 2 2 3.5-3.5"/>'),
+        ('sky', 'URL QR', 'A clean QR code for any web address.',
+          ['Menus, forms, catalogues, websites', 'Links are shortened so codes scan reliably', 'Edit the name any time'],
+          '<path d="M10 13a5 5 0 0 0 7 0l2-2a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-2 2a5 5 0 0 0 7 7l1-1"/>'),
+        ('amber', 'Image QR', 'Turn any picture into a scannable code.',
+          ['Posters, product photos, banners, notices', 'Scanning opens the image instantly', 'Download or copy the QR in one click'],
+          '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>'),
+        ('green', 'UPI Payment QR', 'Get paid from any UPI app.',
+          ['Works with GPay, PhonePe, Paytm, BHIM…', 'Optional fixed amount and payment note', 'Standard UPI format — nothing in between'],
+          '<path d="M6 4h12M6 9h12M14 20 6 9M6 9h3a5 5 0 0 0 0-5"/>'),
+      ] %}
+      {% for color, title, lead, points, icon in tools %}
+      <article class="lp-tool lp-c-{{ color }}">
+        <span class="lp-tool-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">{{ icon|safe }}</svg>
+        </span>
+        <h3>{{ title }}</h3>
+        <p>{{ lead }}</p>
+        <ul>
+          {% for point in points %}<li>{{ point }}</li>{% endfor %}
+        </ul>
+      </article>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+{# ======================= How it works ======================= #}
+<section class="lp-section lp-section-tint" id="how">
+  <div class="lp-wrap">
+    <div class="lp-section-head">
+      <span class="lp-kicker">How it works</span>
+      <h2>From sign-up to scan in four steps</h2>
+    </div>
+    <ol class="lp-steps">
+      <li>
+        <span class="lp-step-n">1</span>
+        <h3>{{ 'Request an account' if signup_mode == 'approval' else 'Create your account' }}</h3>
+        <p>{% if can_signup %}Sign up with your name, email and a password.{% else %}Your administrator creates your account and shares your sign-in.{% endif %}
+          {% if signup_mode == 'approval' %}An administrator approves it, usually quickly.{% endif %}</p>
+      </li>
+      <li>
+        <span class="lp-step-n">2</span>
+        <h3>Pick a tool</h3>
+        <p>Your dashboard shows the tools switched on for your account and how many of each you can create.</p>
+      </li>
+      <li>
+        <span class="lp-step-n">3</span>
+        <h3>Fill in the details</h3>
+        <p>Short, guided forms. Add a photo, logo or colours if you like &mdash; everything else is optional.</p>
+      </li>
+      <li>
+        <span class="lp-step-n">4</span>
+        <h3>Share, print or scan</h3>
+        <p>Download the QR as a PNG, copy the link, or print ID cards. Edits go live on the same link.</p>
+      </li>
+    </ol>
+  </div>
+</section>
+
+{# ======================= Privacy & control ======================= #}
+<section class="lp-section" id="private">
+  <div class="lp-wrap lp-split">
+    <div class="lp-split-card lp-split-user">
+      <span class="lp-kicker">For you</span>
+      <h2>Your work stays yours</h2>
+      <ul class="lp-checks">
+        <li><b>Private by default.</b> Only you can see, edit or delete what you create &mdash; other users can't, even with a link to your editor.</li>
+        <li><b>Public only where it should be.</b> The page a QR opens (your vCard, invite or verification page) is public, because that's what it's for.</li>
+        <li><b>Always know your allowance.</b> Every tool shows how many you've used and what's left.</li>
+        <li><b>Self-hosted.</b> Photos, logos and generated files are stored on the organisation's own server.</li>
+      </ul>
+    </div>
+    <div class="lp-split-card lp-split-admin">
+      <span class="lp-kicker">For administrators</span>
+      <h2>Full control over access</h2>
+      <ul class="lp-checks">
+        <li><b>Approve who joins</b> &mdash; or open sign-ups to everyone, or close them.</li>
+        <li><b>Switch tools on or off</b> for each person.</li>
+        <li><b>Set limits</b> per tool and overall, counted in total or per month.</li>
+        <li><b>Defaults for new users</b>, so every new account starts with the right setup.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+{# ======================= FAQ ======================= #}
+<section class="lp-section lp-section-tint" id="faq">
+  <div class="lp-wrap lp-faq-wrap">
+    <div class="lp-section-head">
+      <span class="lp-kicker">Questions</span>
+      <h2>Good to know</h2>
+    </div>
+    <div class="lp-faq">
+      <details>
+        <summary>Can other people see the QR codes I create?</summary>
+        <p>No. Your lists, editors and downloads are visible only to you. The only public part is the page a QR code opens &mdash; for example your vCard or invitation &mdash; so the people who scan it can see it.</p>
+      </details>
+      <details>
+        <summary>What happens when I reach my limit?</summary>
+        <p>The portal tells you clearly and stops new items in that tool. Depending on how your account is set up, deleting something frees a slot, or your allowance resets at the start of the next month. Your administrator can raise it.</p>
+      </details>
+      <details>
+        <summary>If I edit a vCard or invitation, do I need to reprint the QR?</summary>
+        <p>No. The QR points at your page's link, which never changes, so edits appear on the same code straight away.</p>
+      </details>
+      <details>
+        <summary>Do UPI codes work with every payment app?</summary>
+        <p>Yes. They use the standard UPI format, so GPay, PhonePe, Paytm, BHIM and bank apps can read them directly.</p>
+      </details>
+      <details>
+        <summary>I forgot my password. What do I do?</summary>
+        <p>Ask your administrator &mdash; they can set a new one for you from the Users screen. You can then change it yourself from My account.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+{# ======================= Final call to action ======================= #}
+<section class="lp-final">
+  <div class="lp-wrap lp-final-inner">
+    <div>
+      <h2>Ready to make your first QR code?</h2>
+      <p>{% if can_signup %}{{ signup_label }} or sign in to pick up where you left off.{% else %}Sign in to pick up where you left off.{% endif %}</p>
+    </div>
+    <div class="lp-cta-row">
+      {% if can_signup %}
+      <a href="{{ url_for('auth.signup') }}" class="lp-btn lp-btn-white lp-btn-lg">Sign up</a>
+      {% endif %}
+      <a href="{{ url_for('auth.login') }}" class="lp-btn lp-btn-outline-white lp-btn-lg">Log in</a>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="lp-footer">
+  <div class="lp-wrap lp-footer-inner">
+    <span class="lp-brand"><span class="lp-logo sm">QS</span> {{ app_name }}</span>
+    <span>{{ app_tagline }}</span>
+    <span class="lp-footer-links">
+      <a href="{{ url_for('auth.login') }}">Log in</a>
+      {% if can_signup %}<a href="{{ url_for('auth.signup') }}">Sign up</a>{% endif %}
+    </span>
+  </div>
+</footer>
+
+</body>
+</html>

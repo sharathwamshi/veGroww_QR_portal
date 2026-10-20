@@ -1,140 +1,131 @@
-# Vegroww QR & ID Card Portal
+# QR Saathi
 
-A self-hosted Flask portal for:
-1. **ID Card Generator** — bulk or manual employee data entry → photo upload → generated ID card with an embedded verification QR code.
-2. **Image QR** — upload any image, get a QR code that opens it.
-3. **UPI Payment QR** — generate a scannable UPI payment QR from a UPI ID and an optional fixed amount.
+*Powered by Akruthi India*
 
-All storage (photos, logos, signatures, generated cards, QR codes) is local disk under `static/uploads/`. Data is stored in **MySQL**.
+A self-hosted Flask portal where people sign up, sign in and create QR-based
+content inside their **own private account**. An administrator approves
+accounts, decides which features each person can use, and sets how many
+items they can create.
 
----
+## Features
 
-## 1. Requirements
+| Module | What it makes | Public page (what the QR opens) |
+|---|---|---|
+| **ID Card Generator** | Employee ID cards in batches (CSV/Excel import or manual entry) with a verification QR | `/id-cards/verify/<id>` |
+| **Digital vCards** | Shareable contact pages with an *Add contact* (.vcf) button | `/vcard/v/<slug>` |
+| **Invitations** | Event cards (24 occasion types) with calendar (.ics) and Maps buttons | `/invitation/i/<slug>` |
+| **URL QR** | A QR for any web address, shortened via TinyURL | — |
+| **Image QR** | Upload an image, get a QR that opens it | `/image-qr/file/<name>` |
+| **UPI Payment QR** | `upi://pay` codes for any UPI app | — |
+
+### Accounts and access
+
+- **Sign up / sign in.** People sign up with their name, email and password, and sign in with that email. Sign-up can be *approval required* (the default), *open*, or *closed*.
+- **Privacy.** Everything a user creates belongs to them. Lists only show their own items, and opening someone else's item by changing the URL returns "not found". Public pages stay public by design.
+- **Administrator.**
+  - Approves, disables or deletes accounts, and resets passwords.
+  - Turns each feature on or off per user, and sets per-feature limits plus an optional overall limit.
+  - Limits are counted either as a total at any time (deleting frees a slot) or per calendar month.
+  - **Access settings** holds the *new user defaults* copied onto every new account.
+- **Feature switched off.** Everything the user already made stays online and viewable/downloadable ("view only"); they can't create or change anything in that feature.
+- **The admin sees counts and usage, not other users' content.**
+
+## Requirements
 
 - Python 3.10+
-- MySQL Server 8.x (running locally or reachable over the network)
-- `pip`
-
-## 2. Setup
+- MySQL 5.7/8.x or MariaDB 10.3+ (XAMPP works)
 
 ```bash
-cd qr_id_portal
-python3 -m venv venv
-source venv/bin/activate        # Windows: venv\Scripts\activate
 pip install -r requirements.txt
+cp env.example .env      # then edit .env
 ```
 
-### Create the database
+## Database
 
-Import `schema.sql` straight into MySQL — it creates the database, all four
-tables, indexes and foreign keys:
+### Upgrading an existing installation (keeps all data)
+
+1. **Back up**: phpMyAdmin → your database → *Export* → *Go*.
+2. Select your portal database (the `DB_NAME` in `.env`) → *Import* →
+   `migrations/001_multi_user_accounts.sql` → *Go*.
+3. Start the app.
+
+The migration **only adds**: five new tables, and one nullable `owner_id`
+column (with an index and a foreign key) on `batches`, `vcards`,
+`invitations`, `url_qrs`, `image_qrs` and `upi_qrs`.
+- It never drops, renames or rewrites anything.
+- It is safe to run twice.
+- The previous version of the code still runs against the migrated database, so rolling back is just putting the old code back.
+
+On first start the app:
+- creates the **admin account from `ADMIN_USERNAME` / `ADMIN_PASSWORD`**, so you sign in exactly as before;
+- assigns **every existing record to the admin**.
+
+Existing slugs, files and short links are untouched, so every QR code already printed keeps working.
+
+If the code is started before the migration is imported, it stops with a
+message explaining what to import. It does not half-start.
+
+### Fresh installation
+
+Import `schema.sql`, then `migrations/001_multi_user_accounts.sql`, and set
+`AUTO_CREATE_TABLES=0`. Alternatively, leave `AUTO_CREATE_TABLES=1` on an
+empty database and the app creates everything itself.
+
+> `vegroww_portal_db.sql` and `vegroww_qr_portal_full.sql` start with
+> `DROP DATABASE`. **Never import them into a database that holds real data.**
+
+## Configuration (`.env`)
+
+| Variable | Purpose |
+|---|---|
+| `SECRET_KEY` | Signs sign-in sessions. Use a long random value. |
+| `SESSION_COOKIE_SECURE` | `1` once the portal is served only over https |
+| `REMEMBER_ME_DAYS` | How long "Keep me signed in" lasts (default 30) |
+| `DB_*` / `DATABASE_URL` | MySQL connection |
+| `AUTO_CREATE_TABLES` | `0` when the schema is managed with the SQL files |
+| `ADMIN_USERNAME`, `ADMIN_PASSWORD` | Used **once**, to create the admin on first start. Afterwards change the password in *My account*. |
+| `UPLOAD_ROOT`, `MAX_UPLOAD_MB`, `ALLOWED_*_EXTENSIONS` | Local file storage |
+| `PUBLIC_BASE_URL` | The address phones use to reach the portal (built into QR codes) |
+| `TINYURL_API`, `TINYURL_TIMEOUT` | Link shortening (fails soft to the full link) |
+| `APP_NAME`, `APP_TAGLINE` | Branding shown everywhere (default: *QR Saathi* / *Powered by Akruthi India*) |
+
+**Forgotten admin password:** there is no email reset. Run this from the project folder:
 
 ```bash
-mysql -u root -p < schema.sql
+python -c "from app import create_app; from extensions import db; from models import User; a=create_app(); c=a.app_context(); c.push(); u=User.query.filter_by(role='admin').first(); u.set_password('NewPassword123'); db.session.commit(); print('reset')"
 ```
 
-Or import the same file through phpMyAdmin / MySQL Workbench / HeidiSQL.
-If your hosting panel doesn't allow `CREATE DATABASE`, comment out the two
-lines marked `[PANEL]` at the top of `schema.sql`, select your database
-first, then import.
-
-Alternatively skip this and let the app create the tables itself on first
-run (`AUTO_CREATE_TABLES=1`, the default).
-
-### Configure environment variables
-
-All configuration lives in a `.env` file next to `config.py`. Copy the
-template and edit it:
+## Run
 
 ```bash
-cp .env.example .env
+python app.py                          # development
+gunicorn -w 4 -b 0.0.0.0:8000 wsgi:app # production
 ```
 
-Real environment variables (e.g. `export DB_PASSWORD=...`, systemd
-`Environment=`, Docker `-e`) always override the `.env` file, so the same
-build works locally and in production.
+## Security notes
 
-| Variable | Purpose | Default |
-|---|---|---|
-| `SECRET_KEY` | Flask session secret | change this in production |
-| `FLASK_DEBUG`, `FLASK_HOST`, `FLASK_PORT` | Dev-server settings (ignored under gunicorn) | 1 / 0.0.0.0 / 5000 |
-| `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DB_NAME` | MySQL connection | root / password / localhost / 3306 / vegroww_qr_portal |
-| `DATABASE_URL` | Full DSN — overrides all `DB_*` values if set | built from `DB_*` |
-| `AUTO_CREATE_TABLES` | Run `db.create_all()` on boot. Set to `0` after importing `schema.sql` | 1 |
-| `ADMIN_USERNAME`, `ADMIN_PASSWORD` | Static login credentials | admin / Vegroww@123 |
-| `UPLOAD_ROOT` | Where photos/logos/cards/QRs are stored. Blank = `static/uploads` | static/uploads |
-| `MAX_UPLOAD_MB` | Upload size cap | 30 |
-| `ALLOWED_IMAGE_EXTENSIONS`, `ALLOWED_DATA_EXTENSIONS`, `ALLOWED_ARCHIVE_EXTENSIONS` | Comma-separated allowlists | png,jpg,jpeg,webp / csv,xlsx,xls / zip |
-| `PUBLIC_BASE_URL` | Base URL the app is reachable at | http://127.0.0.1:5000 |
-| `TINYURL_API`, `TINYURL_TIMEOUT` | QR link shortening endpoint and timeout | tinyurl api-create / 5s |
-| `APP_NAME`, `APP_TAGLINE` | Branding shown in the UI | Vegroww QR Portal |
-
-**Important:** change `ADMIN_PASSWORD` and `SECRET_KEY` before using this
-anywhere but your own machine, and keep `.env` out of git (`.gitignore`
-already excludes it).
-
-## 3. Run
-
-```bash
-python app.py
-```
-
-Visit `http://127.0.0.1:5000` and log in with the admin credentials above.
-
-For production, use a WSGI server instead of the Flask dev server:
-```bash
-gunicorn -w 4 -b 0.0.0.0:8000 wsgi:app
-```
-
----
-
-## How the modules work
-
-### ID Card Generator
-1. **Create a Batch** — set the company name, address, logo and issuing-authority signature once. Every card in the batch reuses these.
-2. **Add employees** — either:
-   - **Bulk Upload**: a `.csv`/`.xlsx`/`.xls` file. Column headers are matched flexibly against: `Sr. No`, `Name`, `Employee Code`, `Blood Group`, `Unit Landline Number`, `Emergency Contact Number`, `Employee Contact Number`. Only `Name` and `Employee Code` are required — everything else is optional.
-   - **Manual Entry**: a form, with an optional photo upload right away.
-3. Employees without a photo show as **Needs Photo** — upload one inline from the list, or via Edit.
-4. Click **Generate** (single) or **Generate All Ready Cards** (batch) to render the ID card image and its verification QR code.
-5. **Edit** any employee, replace their photo, and **Regenerate** to refresh the card and QR.
-6. Each card's QR encodes a link to a public **verification page** (`/id-cards/verify/<id>`, no login required) showing the employee's photo, name, code and company — the link is shortened via TinyURL before being encoded, falling back to the full URL automatically if TinyURL can't be reached.
-
-### Image QR
-Upload any image → it's saved locally and served at a stable local URL → that URL is shortened via TinyURL and encoded into a QR code. Manage (view/regenerate/delete) from the list page.
-
-### UPI Payment QR
-Enter a UPI ID (e.g. `name@bank`) and, optionally, a payee name / fixed amount / note. This builds a standard `upi://pay?...` deep link and encodes it directly — **not** shortened, since UPI apps require the raw `upi://` scheme to recognise it as a payment QR.
-
----
+- Passwords are hashed with Werkzeug (scrypt/pbkdf2).
+- Changing or resetting a password, or disabling an account, signs that account out everywhere.
+- Every form carries a CSRF token.
+- Sign-in is throttled after repeated failures. The counter is held in memory, per process.
+- `?next=` redirects only go to pages on this site.
+- Website and social links on public vCards are restricted to http(s), so `javascript:` links are dropped.
 
 ## Project structure
 
 ```
-qr_id_portal/
-├── app.py                  # App factory (create_app), dev server entrypoint
-├── wsgi.py                 # Production WSGI entrypoint (gunicorn/uwsgi)
-├── config.py                # All configuration (env-var driven)
-├── extensions.py            # Shared SQLAlchemy instance
-├── schema.sql                # Reference MySQL schema
-├── requirements.txt
-├── models/                  # Batch, IDCard, ImageQR, UpiQR
-├── routes/                  # auth, dashboard, id_cards, image_qr, upi_qr blueprints
-├── utils/
-│   ├── qr_utils.py           # QR generation + TinyURL shortening
-│   ├── id_card_render.py     # PIL-based ID card image renderer
-│   ├── bulk_import.py         # CSV/Excel column-flexible reader
-│   ├── file_helpers.py        # Upload/delete helpers
-│   └── decorators.py          # @login_required
-├── templates/                # Jinja templates (blue/white/navy theme)
-└── static/
-    ├── css/style.css
-    └── uploads/               # Local storage: photos, logos, signatures, cards, qr_codes, images
+app.py                  App factory: request hooks (user, CSRF, module access), template helpers
+config.py               Environment-driven configuration
+migrations/             Importable, additive SQL migrations
+models/                 user.py (accounts, permissions, defaults, settings, usage) + one file per module
+routes/                 auth, account, admin, dashboard + one blueprint per module
+utils/
+  modules.py            The six modules, described once (labels, icons, public endpoints)
+  access.py             Ownership checks, feature access and limit maths
+  bootstrap.py          Start-up: schema check, admin seed, ownership backfill
+  security.py           CSRF, sign-in throttling, safe redirects/links, validation
+  cleanup.py            Delete records together with their files
+  ...                   QR, ID card rendering, bulk import, invitations, vCards
+templates/              Jinja templates (admin/ for the admin area)
+static/                 CSS and JS
 ```
-
-## Notes & assumptions
-
-- Login is a single static admin account (no signup flow, no per-user roles) — as requested.
-- The reference employee sheet's "Issuing Authority Signature" is treated as a **batch-level** asset (one signature/stamp per company, applied to every card in that batch), since it repeats per unit rather than varying per employee.
-- QR error correction is set to **High**, so codes stay scannable even with the small "SCAN TO VERIFY" caption baked in around it.
-- Everything runs and stores data locally — no cloud storage, no external services besides the optional TinyURL shortening call (which fails soft if there's no internet access).

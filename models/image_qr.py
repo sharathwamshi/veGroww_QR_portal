@@ -9,6 +9,13 @@ class ImageQR(db.Model):
     __tablename__ = "image_qrs"
 
     id = db.Column(db.Integer, primary_key=True)
+
+    # Owning account. Nullable so pre-migration rows stay valid; the app
+    # assigns any un-owned row to the admin on boot.
+    owner_id = db.Column(
+        db.Integer, db.ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=True, index=True,
+    )
     title = db.Column(db.String(150), nullable=False)
 
     image_filename = db.Column(db.String(255), nullable=False)

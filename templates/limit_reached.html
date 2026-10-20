@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Limit reached &mdash; {{ app_name }}{% endblock %}
+{% block content %}
+{% import "_macros.html" as m with context %}
+{% set meta = modules[status.module] %}
+<div class="panel state-panel">
+  <div class="state-icon" aria-hidden="true">{{ meta.icon|safe }}</div>
+  <h1>You've reached your {{ meta.label }} limit</h1>
+  <p>{{ message }}</p>
+  <div class="state-meter">{{ m.quota_meter(status.module) }}</div>
+  <div class="btn-row" style="justify-content:center;">
+    <a href="{{ url_for(meta.endpoint) }}" class="btn btn-primary">See your {{ meta.unit }}</a>
+    <a href="{{ url_for('account.home') }}" class="btn btn-outline">View all your limits</a>
+  </div>
+</div>
+{% endblock %}

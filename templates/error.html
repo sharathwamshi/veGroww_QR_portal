@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ title }} &mdash; {{ app_name }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="error-body">
+  <div class="panel error-panel">
+    <div class="error-code">{{ code }}</div>
+    <h1>{{ title }}</h1>
+    <p>{{ message }}</p>
+    <div class="btn-row" style="justify-content:center;">
+      <a href="javascript:history.back()" class="btn btn-outline">Go back</a>
+      {% if current_user %}
+        <a href="{{ url_for('dashboard.home') }}" class="btn btn-primary">Go to dashboard</a>
+      {% else %}
+        <a href="{{ url_for('auth.login') }}" class="btn btn-primary">Sign in</a>
+      {% endif %}
+    </div>
+  </div>
+</body>
+</html>

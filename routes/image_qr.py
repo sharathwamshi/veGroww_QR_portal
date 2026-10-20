@@ -3,8 +3,12 @@ import os
 from flask import (Blueprint, current_app, flash, redirect, render_template,
                     request, send_from_directory, url_for)
 
+from flask import g
+
 from extensions import db
 from models import ImageQR
+from utils.access import get_owned_or_404, limit_response, owned, record_usage
+from utils.cleanup import delete_image_qr
 from utils.decorators import login_required
 from utils.url_helpers import public_url_for
 from utils.file_helpers import (allowed_file, delete_if_exists,
@@ -17,13 +21,17 @@ image_qr_bp = Blueprint("image_qr", __name__, url_prefix="/image-qr")
 @image_qr_bp.route("/")
 @login_required
 def list_view():
-    items = ImageQR.query.order_by(ImageQR.created_at.desc()).all()
+    items = owned(ImageQR).order_by(ImageQR.created_at.desc()).all()
     return render_template("image_qr/list.html", items=items)
 
 
 @image_qr_bp.route("/new", methods=["GET", "POST"])
 @login_required
 def upload():
+    blocked = limit_response("image_qr")
+    if blocked:
+        return blocked
+
     if request.method == "POST":
         title = request.form.get("title", "").strip()
         image = request.files.get("image")
@@ -46,6 +54,7 @@ def upload():
         )
 
         record = ImageQR(
+            owner_id=g.user.id,
             title=title,
             image_filename=image_filename,
             qr_filename=qr_filename,
@@ -53,6 +62,7 @@ def upload():
             short_url=short_url,
         )
         db.session.add(record)
+        record_usage(g.user, "image_qr")
         db.session.commit()
         flash("QR code generated for your image.", "success")
         return redirect(url_for("image_qr.list_view"))
@@ -70,7 +80,7 @@ def serve_image(filename):
 @login_required
 def download_qr(item_id):
     """Download the QR code PNG itself, named after the item's title."""
-    record = ImageQR.query.get_or_404(item_id)
+    record = get_owned_or_404(ImageQR, item_id)
     return send_from_directory(
         current_app.config["QR_DIR"],
         record.qr_filename,
@@ -82,7 +92,7 @@ def download_qr(item_id):
 @image_qr_bp.route("/<int:item_id>/regenerate", methods=["POST"])
 @login_required
 def regenerate(item_id):
-    record = ImageQR.query.get_or_404(item_id)
+    record = get_owned_or_404(ImageQR, item_id)
     delete_if_exists(os.path.join(current_app.config["QR_DIR"], record.qr_filename))
 
     image_url = public_url_for("image_qr.serve_image", filename=record.image_filename)
@@ -100,10 +110,8 @@ def regenerate(item_id):
 @image_qr_bp.route("/<int:item_id>/delete", methods=["POST"])
 @login_required
 def delete(item_id):
-    record = ImageQR.query.get_or_404(item_id)
-    delete_if_exists(os.path.join(current_app.config["IMAGE_QR_SOURCE_DIR"], record.image_filename))
-    delete_if_exists(os.path.join(current_app.config["QR_DIR"], record.qr_filename))
-    db.session.delete(record)
+    record = get_owned_or_404(ImageQR, item_id)
+    delete_image_qr(record)
     db.session.commit()
     flash("Image and its QR code were deleted.", "info")
     return redirect(url_for("image_qr.list_view"))

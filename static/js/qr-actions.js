@@ -44,24 +44,24 @@
   /* ------------------------------------------------------------------
      Clipboard: text
      ------------------------------------------------------------------ */
-  function copyText(text) {
+  function copyText(text, okMessage) {
     if (!text) {
       toast("Nothing to copy for this code.", true);
       return;
     }
     if (navigator.clipboard && window.isSecureContext) {
       navigator.clipboard.writeText(text).then(
-        function () { toast("Link copied"); },
-        function () { legacyCopyText(text); }
+        function () { toast(okMessage || "Link copied"); },
+        function () { legacyCopyText(text, okMessage); }
       );
     } else {
-      legacyCopyText(text);
+      legacyCopyText(text, okMessage);
     }
   }
 
   // http:// on a LAN IP is not a secure context, so navigator.clipboard is
   // unavailable there. Fall back to a hidden textarea + execCommand.
-  function legacyCopyText(text) {
+  function legacyCopyText(text, okMessage) {
     var ta = document.createElement("textarea");
     ta.value = text;
     ta.setAttribute("readonly", "");
@@ -72,7 +72,7 @@
     var ok = false;
     try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
     ta.remove();
-    toast(ok ? "Link copied" : "Couldn't copy — select the link and copy manually.", !ok);
+    toast(ok ? (okMessage || "Link copied") : "Couldn't copy — select the text and copy manually.", !ok);
   }
 
   /* ------------------------------------------------------------------
@@ -220,7 +220,7 @@
   /* ------------------------------------------------------------------
      Collapsible sidebar
      ------------------------------------------------------------------ */
-  var NAV_KEY = "vegroww.nav.collapsed";
+  var NAV_KEY = "qrsaathi.nav.collapsed";
 
   function initSidebar() {
     var shell = document.querySelector(".app-shell");
@@ -244,6 +244,47 @@
       paint(collapsed);
       try { localStorage.setItem(NAV_KEY, collapsed ? "1" : "0"); } catch (e) { /* private mode */ }
     });
+  }
+
+
+  /* ------------------------------------------------------------------
+     Mobile drawer: on phones/tablets the sidebar slides in from the left
+     ------------------------------------------------------------------ */
+  function initDrawer() {
+    var shell = document.querySelector(".app-shell");
+    var openBtn = document.querySelector("[data-drawer-open]");
+    var sidebar = document.getElementById("sidebar");
+    var backdrop = document.querySelector(".drawer-backdrop");
+    if (!shell || !openBtn || !sidebar) { return; }
+    var mq = window.matchMedia("(max-width: 900px)");
+
+    function setOpen(open) {
+      shell.classList.toggle("nav-open", open);
+      openBtn.setAttribute("aria-expanded", open ? "true" : "false");
+      if (backdrop) { backdrop.hidden = !open; }
+      document.body.classList.toggle("drawer-locked", open);
+      if (open) {
+        var first = sidebar.querySelector(".nav-link.active") || sidebar.querySelector(".nav-link");
+        if (first) { first.focus({ preventScroll: true }); }
+      } else if (mq.matches) {
+        openBtn.focus({ preventScroll: true });
+      }
+    }
+
+    openBtn.addEventListener("click", function () { setOpen(true); });
+    document.querySelectorAll("[data-drawer-close]").forEach(function (el) {
+      el.addEventListener("click", function () { setOpen(false); });
+    });
+    // Tapping a menu link navigates; close so the next page starts clean
+    sidebar.addEventListener("click", function (e) {
+      if (mq.matches && e.target.closest("a.nav-link, a.user-chip")) { setOpen(false); }
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && shell.classList.contains("nav-open")) { setOpen(false); }
+    });
+    // Rotating to a wide screen should never leave the page locked
+    var onChange = function () { if (!mq.matches) { setOpen(false); } };
+    if (mq.addEventListener) { mq.addEventListener("change", onChange); } else if (mq.addListener) { mq.addListener(onChange); }
   }
 
   /* ------------------------------------------------------------------
@@ -541,12 +582,175 @@
   }
 
   /* ------------------------------------------------------------------
+     Confirm before destructive submits: <form data-confirm="...">
+     (Replaces inline onsubmit="confirm('...')", which broke on names
+     containing an apostrophe and then submitted without asking.)
+     ------------------------------------------------------------------ */
+  function initConfirms() {
+    document.addEventListener("submit", function (e) {
+      var form = e.target;
+      if (!form || !form.getAttribute) { return; }
+      var msg = form.getAttribute("data-confirm");
+      if (msg && !window.confirm(msg)) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+      }
+    }, true);
+  }
+
+  /* ------------------------------------------------------------------
+     Password helpers: show/hide, live rules, confirm match, generator
+     ------------------------------------------------------------------ */
+  function initPasswordFields() {
+    document.querySelectorAll("[data-password-toggle]").forEach(function (btn) {
+      var input = document.getElementById(btn.getAttribute("data-password-toggle"));
+      if (!input) { return; }
+      btn.addEventListener("click", function () {
+        var show = input.type === "password";
+        input.type = show ? "text" : "password";
+        btn.textContent = show ? "Hide" : "Show";
+        btn.setAttribute("aria-label", show ? "Hide password" : "Show password");
+        input.focus();
+      });
+    });
+
+    document.querySelectorAll("[data-password-meter]").forEach(function (input) {
+      var group = input.closest(".form-group");
+      var rules = group && group.querySelector("[data-password-rules]");
+      if (!rules) { return; }
+      function paint() {
+        var v = input.value || "";
+        var checks = {
+          length: v.length >= 8,
+          mix: /[A-Za-z]/.test(v) && /\d/.test(v)
+        };
+        rules.querySelectorAll("[data-rule]").forEach(function (li) {
+          li.classList.toggle("is-met", !!checks[li.getAttribute("data-rule")]);
+        });
+      }
+      input.addEventListener("input", paint);
+      paint();
+    });
+
+    document.querySelectorAll("[data-password-confirm]").forEach(function (confirmInput) {
+      var source = document.getElementById(confirmInput.getAttribute("data-password-confirm"));
+      var group = confirmInput.closest(".form-group");
+      var hint = group && group.querySelector("[data-confirm-hint]");
+      if (!source || !hint) { return; }
+      function paint() {
+        var mismatch = confirmInput.value && confirmInput.value !== source.value;
+        hint.hidden = !mismatch;
+        confirmInput.classList.toggle("is-invalid", !!mismatch);
+      }
+      confirmInput.addEventListener("input", paint);
+      source.addEventListener("input", paint);
+    });
+
+    document.querySelectorAll("[data-generate-password]").forEach(function (btn) {
+      var target = document.getElementById(btn.getAttribute("data-generate-password"));
+      if (!target) { return; }
+      btn.addEventListener("click", function () {
+        // No look-alike characters (0/O, 1/l/I) so it's easy to read out.
+        var letters = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ";
+        var digits = "23456789";
+        var all = letters + digits;
+        var bytes = new Uint32Array(12);
+        (window.crypto || window.msCrypto).getRandomValues(bytes);
+        var out = letters[bytes[0] % letters.length] + digits[bytes[1] % digits.length];
+        for (var i = 2; i < 12; i++) { out += all[bytes[i] % all.length]; }
+        out = out.split("").sort(function () { return 0.5 - Math.random(); }).join("");
+        target.value = out;
+        var form = target.form;
+        if (form) {
+          form.querySelectorAll("[data-password-confirm='" + target.id + "']").forEach(function (c) { c.value = out; });
+        }
+        target.dispatchEvent(new Event("input", { bubbles: true }));
+        target.select();
+        copyText(out, "Password generated and copied");
+      });
+    });
+  }
+
+  /* ------------------------------------------------------------------
+     Admin access grid: dim switched-off rows, one-click "unlimited"
+     ------------------------------------------------------------------ */
+  function initAccessGrid() {
+    document.querySelectorAll("[data-access-row]").forEach(function (row) {
+      var toggle = row.querySelector("[data-access-toggle]");
+      var quota = row.querySelector("[data-access-quota]");
+      var unlimited = row.querySelector("[data-set-unlimited]");
+      if (toggle) {
+        toggle.addEventListener("change", function () {
+          row.classList.toggle("is-off", !toggle.checked);
+        });
+      }
+      if (unlimited && quota) {
+        unlimited.addEventListener("click", function () {
+          quota.value = "";
+          quota.dispatchEvent(new Event("input", { bubbles: true }));
+          quota.focus();
+        });
+      }
+    });
+
+    document.querySelectorAll("[data-choice-radio]").forEach(function (radio) {
+      radio.addEventListener("change", function () {
+        document.querySelectorAll("input[name='" + radio.name + "']").forEach(function (r) {
+          var card = r.closest(".choice-card");
+          if (card) { card.classList.toggle("is-selected", r.checked); }
+        });
+      });
+    });
+  }
+
+  /* ------------------------------------------------------------------
+     Unsaved-changes warning for long settings forms
+     ------------------------------------------------------------------ */
+  function initDirtyGuards() {
+    document.querySelectorAll("form[data-dirty-guard]").forEach(function (form) {
+      var dirty = false;
+      var hint = form.querySelector("[data-dirty-hint]");
+      function mark() {
+        dirty = true;
+        if (hint) { hint.hidden = false; }
+      }
+      form.addEventListener("input", mark);
+      form.addEventListener("change", mark);
+      form.addEventListener("submit", function () { dirty = false; });
+      window.addEventListener("beforeunload", function (e) {
+        if (dirty) { e.preventDefault(); e.returnValue = ""; }
+      });
+    });
+  }
+
+  /* ------------------------------------------------------------------
+     Type-to-confirm delete
+     ------------------------------------------------------------------ */
+  function initDeleteGuards() {
+    document.querySelectorAll("form[data-delete-guard]").forEach(function (form) {
+      var input = form.querySelector("[data-must-equal]");
+      var button = form.querySelector("[data-delete-button]");
+      if (!input || !button) { return; }
+      var expected = (input.getAttribute("data-must-equal") || "").trim().toLowerCase();
+      input.addEventListener("input", function () {
+        button.disabled = input.value.trim().toLowerCase() !== expected;
+      });
+    });
+  }
+
+  /* ------------------------------------------------------------------
      Wire up
      ------------------------------------------------------------------ */
   document.addEventListener("DOMContentLoaded", function () {
     modal = document.getElementById("qrModal");
+    initConfirms();
+    initPasswordFields();
+    initAccessGrid();
+    initDirtyGuards();
+    initDeleteGuards();
     initFilter();
     initSidebar();
+    initDrawer();
     initAccordions();
     initRepeats();
     initDesignControls();

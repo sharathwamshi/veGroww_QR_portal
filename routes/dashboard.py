@@ -1,24 +1,43 @@
-from flask import Blueprint, render_template
+from flask import Blueprint, g, render_template
 
-from models import Batch, IDCard, ImageQR, Invitation, UpiQR, UrlQR, VCard
-from utils.decorators import login_required
+from models import Batch
+from utils.access import has_content, has_module, owned, owned_count, quota_status
+from utils.modules import MODULES
 
 dashboard_bp = Blueprint("dashboard", __name__)
 
 
 @dashboard_bp.route("/")
-@login_required
 def home():
-    stats = {
-        "batches": Batch.query.count(),
-        "total_cards": IDCard.query.count(),
-        "generated_cards": IDCard.query.filter_by(status="generated").count(),
-        "pending_cards": IDCard.query.filter(IDCard.status != "generated").count(),
-        "image_qrs": ImageQR.query.count(),
-        "upi_qrs": UpiQR.query.count(),
-        "vcards": VCard.query.count(),
-        "url_qrs": UrlQR.query.count(),
-        "invitations": Invitation.query.count(),
-    }
-    recent_batches = Batch.query.order_by(Batch.created_at.desc()).limit(5).all()
-    return render_template("dashboard.html", stats=stats, recent_batches=recent_batches)
+    user = g.user
+    if user is None:
+        # Signed-out visitors get the public landing page; everyone else
+        # goes straight to their own dashboard.
+        from utils.access import signup_mode
+        return render_template("landing.html", signup_mode=signup_mode())
+    tiles = []
+    for key, meta in MODULES.items():
+        enabled = has_module(user, key)
+        count = owned_count(user, key)
+        if not enabled and not has_content(user, key):
+            continue
+        tiles.append({
+            "key": key,
+            "meta": meta,
+            "count": count,
+            "enabled": enabled,
+            "quota": quota_status(user, key),
+        })
+
+    recent_batches = []
+    if has_module(user, "id_cards") or has_content(user, "id_cards"):
+        recent_batches = owned(Batch).order_by(Batch.created_at.desc()).limit(5).all()
+
+    admin = None
+    if user.is_admin:
+        from routes.admin import admin_summary
+        admin = admin_summary()
+
+    return render_template(
+        "dashboard.html", tiles=tiles, recent_batches=recent_batches, admin=admin,
+    )

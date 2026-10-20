@@ -162,7 +162,7 @@ def build_ics(invitation, page_url: str = "") -> str:
     lines = [
         "BEGIN:VCALENDAR",
         "VERSION:2.0",
-        "PRODID:-//Vegroww QR Portal//Invitation//EN",
+        "PRODID:-//QR Saathi//Invitation//EN",
         "CALSCALE:GREGORIAN",
         "METHOD:PUBLISH",
     ]
@@ -182,6 +182,8 @@ def build_ics(invitation, page_url: str = "") -> str:
 
         lines += [
             "BEGIN:VEVENT",
+            # UID kept unchanged on purpose: guests who already saved an event
+            # would otherwise get a duplicate when they add it again.
             f"UID:invitation-{invitation.id}-{index}@vegroww-qr-portal",
             f"DTSTAMP:{now}",
             f"DTSTART:{_stamp(start)}",

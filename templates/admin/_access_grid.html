@@ -1,0 +1,72 @@
+{#
+  The feature + limit grid, shared by the user detail page and the
+  new-user defaults page so both behave identically.
+
+  values : {module: (enabled, quota)}
+  usage  : optional {module: quota_status} to show current usage
+#}
+{% macro access_grid(values, period, total, usage=None) -%}
+<div class="access-grid" data-access-grid>
+  <div class="access-row access-head">
+    <span>Feature</span>
+    <span>Allowed</span>
+    <span>Limit</span>
+    {% if usage %}<span>Used now</span>{% endif %}
+  </div>
+
+  {% for key, meta in modules.items() %}
+  {% set enabled, quota = values[key] %}
+  <div class="access-row {{ '' if enabled else 'is-off' }}" data-access-row>
+    <span class="access-feature">
+      <span class="access-icon" aria-hidden="true">{{ meta.icon|safe }}</span>
+      <span>
+        <strong>{{ meta.label }}</strong>
+        <span class="access-unit">Counts {{ meta.unit }}</span>
+      </span>
+    </span>
+
+    <span>
+      <label class="switch" title="Allow {{ meta.label }}">
+        <input type="checkbox" name="enabled_{{ key }}" {{ 'checked' if enabled }} data-access-toggle
+               aria-label="Allow {{ meta.label }}">
+        <span class="switch-track"><span class="switch-thumb"></span></span>
+      </label>
+    </span>
+
+    <span class="limit-cell">
+      <input type="number" name="quota_{{ key }}" min="0" max="1000000" step="1" inputmode="numeric"
+             value="{{ quota if quota is not none else '' }}" placeholder="Unlimited"
+             aria-label="Limit for {{ meta.label }} (blank means unlimited)" data-access-quota>
+      <button type="button" class="btn btn-ghost btn-sm" data-set-unlimited title="Remove the limit">&infin;</button>
+    </span>
+
+    {% if usage %}
+    {% set u = usage[key] %}
+    <span class="access-usage">
+      <strong>{{ u.used }}</strong>{% if u.limit is not none %} / {{ u.limit }}{% endif %}
+      {% if u.limit %}<span class="quota-bar small {{ 'is-full' if u.at_limit else ('is-near' if u.percent >= 80 else '') }}"><span style="width: {{ u.percent }}%;"></span></span>{% endif %}
+    </span>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+
+<div class="form-row access-extra">
+  <div class="form-group">
+    <label for="limit_period">How limits are counted</label>
+    <select id="limit_period" name="limit_period">
+      <option value="lifetime" {{ 'selected' if period == 'lifetime' }}>Total at any time</option>
+      <option value="monthly" {{ 'selected' if period == 'monthly' }}>Per calendar month</option>
+    </select>
+    <p class="hint"><strong>Total</strong>: what they have right now &mdash; deleting frees a slot.
+      <strong>Monthly</strong>: what they create each month &mdash; resets on the 1st.</p>
+  </div>
+  <div class="form-group">
+    <label for="total_limit">Overall limit across all features</label>
+    <input type="number" id="total_limit" name="total_limit" min="0" max="1000000" step="1" inputmode="numeric"
+           value="{{ total if total is not none else '' }}" placeholder="No overall limit">
+    <p class="hint">Optional. A ceiling on everything combined, on top of the per-feature limits.</p>
+  </div>
+</div>
+<p class="hint">Leave a limit blank for unlimited. A limit of 0 lets the user view the feature but not create anything.</p>
+{%- endmacro %}

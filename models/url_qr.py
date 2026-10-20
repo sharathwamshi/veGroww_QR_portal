@@ -16,6 +16,13 @@ class UrlQR(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
 
+    # Owning account. Nullable so pre-migration rows stay valid; the app
+    # assigns any un-owned row to the admin on boot.
+    owner_id = db.Column(
+        db.Integer, db.ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=True, index=True,
+    )
+
     name = db.Column(db.String(150), nullable=False)
     target_url = db.Column(db.String(1000), nullable=False)
     short_url = db.Column(db.String(500), nullable=True)

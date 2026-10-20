@@ -1,0 +1,64 @@
+{#
+  Shared building blocks for usage limits.
+
+  quota_meter(module)   - "3 of 10 used" with a bar, for page headers/cards
+  new_button(module, href, label) - the primary "+ New" button, which turns
+                          into a disabled button with an explanation when
+                          the user is at their limit or in view-only mode.
+#}
+
+{% macro quota_meter(module, compact=False) -%}
+{%- set q = quota(module) -%}
+{%- if q and q.enabled and not current_user.is_admin -%}
+<div class="quota-meter {{ 'is-full' if q.at_limit else ('is-near' if q.percent >= 80 else '') }} {{ 'compact' if compact }}"
+     title="{% if q.period == 'monthly' %}Resets on {{ q.resets_on.strftime('%d %b %Y') }}{% else %}Deleting an item frees up a slot{% endif %}">
+  <div class="quota-text">
+    {% if compact %}
+      {% if q.unlimited %}No limit{% if q.period == 'monthly' %} &middot; {{ q.used }} this month{% endif %}
+      {% elif q.limit is none %}{{ q.remaining }} left on your account
+      {% else %}<strong>{{ q.used }}</strong> of {{ q.limit }} used{% if q.period == 'monthly' %} this month{% endif %}{% endif %}
+    {% elif q.unlimited %}
+      <strong>{{ q.used }}</strong> {{ modules[module].unit_one if q.used == 1 else modules[module].unit }}{% if q.period == 'monthly' %} this month{% endif %} &middot; no limit
+    {% elif q.capped_by_total and q.limit is none %}
+      <strong>{{ q.used }}</strong> used &middot; <strong>{{ q.remaining }}</strong> left on your account
+    {% else %}
+      <strong>{{ q.used }}</strong> of {{ q.limit }} {{ modules[module].unit }}{% if q.period == 'monthly' %} this month{% endif %}
+      {% if q.capped_by_total and q.remaining is not none %}&middot; {{ q.remaining }} left on your account{% endif %}
+    {% endif %}
+  </div>
+  {% if q.limit %}
+  <div class="quota-bar" role="progressbar" aria-valuemin="0" aria-valuemax="{{ q.limit }}" aria-valuenow="{{ q.used }}"
+       aria-label="{{ q.used }} of {{ q.limit }} used">
+    <span style="width: {{ q.percent }}%;"></span>
+  </div>
+  {% endif %}
+</div>
+{%- endif -%}
+{%- endmacro %}
+
+
+{% macro new_button(module, href, label, extra_class='', check_limit=True) -%}
+{%- set q = quota(module) -%}
+{%- if module_readonly -%}
+  <span class="btn btn-primary is-disabled {{ extra_class }}" aria-disabled="true"
+        title="This feature is switched off for your account">{{ label }}</span>
+{%- elif check_limit and q and q.at_limit -%}
+  <span class="btn btn-primary is-disabled {{ extra_class }}" aria-disabled="true"
+        title="You've reached your limit for {{ modules[module].label }}">{{ label }}</span>
+{%- else -%}
+  <a href="{{ href }}" class="btn btn-primary {{ extra_class }}">{{ label }}</a>
+{%- endif -%}
+{%- endmacro %}
+
+
+{% macro limit_notice(module) -%}
+{%- set q = quota(module) -%}
+{%- if q and q.at_limit and not module_readonly -%}
+<div class="flash flash-warning limit-notice">
+  <strong>Limit reached.</strong>
+  {% if q.capped_by_total %}You've used your account's overall allowance.{% else %}You've used all {{ q.limit }} {{ modules[module].unit }}{% if q.period == 'monthly' %} for this month{% endif %}.{% endif %}
+  {% if q.period == 'monthly' and q.resets_on %}It resets on {{ q.resets_on.strftime('%d %b %Y') }}.{% else %}Delete something you no longer need to free up a slot,{% endif %}
+  or ask your administrator for a higher limit.
+</div>
+{%- endif -%}
+{%- endmacro %}

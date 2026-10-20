@@ -4,8 +4,13 @@ import re
 from flask import (Blueprint, Response, current_app, flash, redirect,
                    render_template, request, send_from_directory, url_for)
 
+from flask import g
+
 from extensions import db
 from models import VCard, VCardLink
+from utils.access import get_owned_or_404, limit_response, owned, record_usage
+from utils.cleanup import delete_vcard
+from utils.security import normalise_link
 from utils.decorators import login_required
 from utils.url_helpers import public_url_for
 from utils.file_helpers import (allowed_file, delete_if_exists,
@@ -42,6 +47,9 @@ def _collect_links(form):
         labels = form.getlist(f"{kind}_label")
         for index, value in enumerate(values):
             value = value.strip()
+            if kind == "website":
+                # Only http(s) links reach the public page; javascript: etc. are dropped.
+                value = normalise_link(value)
             if not value:
                 continue
             links.append(
@@ -58,7 +66,7 @@ def _collect_links(form):
     values = form.getlist("social_value")
     labels = form.getlist("social_label")
     for index, value in enumerate(values):
-        value = value.strip()
+        value = normalise_link(value)
         if not value:
             continue
         platform = platforms[index].strip().lower() if index < len(platforms) else "website"
@@ -132,13 +140,17 @@ def _save_image(card, file_storage):
 @vcard_bp.route("/")
 @login_required
 def list_view():
-    cards = VCard.query.order_by(VCard.created_at.desc()).all()
+    cards = owned(VCard).order_by(VCard.created_at.desc()).all()
     return render_template("vcard/list.html", cards=cards)
 
 
 @vcard_bp.route("/new", methods=["GET", "POST"])
 @login_required
 def create():
+    blocked = limit_response("vcard")
+    if blocked:
+        return blocked
+
     if request.method == "POST":
         if not request.form.get("first_name", "").strip():
             flash("Enter a name — it's the only field the card can't go without.", "error")
@@ -147,7 +159,7 @@ def create():
                 platforms=SOCIAL_PLATFORMS, mode="create"
             )
 
-        card = VCard()
+        card = VCard(owner_id=g.user.id)
         _apply_form(card, request.form)
         card.slug = unique_slug(
             request.form.get("slug") or card.full_name,
@@ -164,6 +176,7 @@ def create():
         db.session.add(card)
         db.session.flush()      # assign card.id before the QR URL is built
         _regenerate_qr(card)
+        record_usage(g.user, "vcard")
         db.session.commit()
 
         flash(f"vCard created for {card.full_name}.", "success")
@@ -177,7 +190,7 @@ def create():
 @vcard_bp.route("/<int:card_id>/edit", methods=["GET", "POST"])
 @login_required
 def edit(card_id):
-    card = VCard.query.get_or_404(card_id)
+    card = get_owned_or_404(VCard, card_id)
 
     if request.method == "POST":
         if not request.form.get("first_name", "").strip():
@@ -217,7 +230,7 @@ def edit(card_id):
 @vcard_bp.route("/<int:card_id>/regenerate", methods=["POST"])
 @login_required
 def regenerate(card_id):
-    card = VCard.query.get_or_404(card_id)
+    card = get_owned_or_404(VCard, card_id)
     _regenerate_qr(card)
     db.session.commit()
     flash("QR code regenerated. Reprint any material using the old code.", "success")
@@ -227,12 +240,8 @@ def regenerate(card_id):
 @vcard_bp.route("/<int:card_id>/delete", methods=["POST"])
 @login_required
 def delete(card_id):
-    card = VCard.query.get_or_404(card_id)
-    if card.image_filename:
-        delete_if_exists(os.path.join(current_app.config["VCARD_IMAGE_DIR"], card.image_filename))
-    if card.qr_filename:
-        delete_if_exists(os.path.join(current_app.config["QR_DIR"], card.qr_filename))
-    db.session.delete(card)
+    card = get_owned_or_404(VCard, card_id)
+    delete_vcard(card)
     db.session.commit()
     flash("vCard deleted. Its public page and QR no longer resolve.", "info")
     return redirect(url_for("vcard.list_view"))
@@ -241,7 +250,7 @@ def delete(card_id):
 @vcard_bp.route("/<int:card_id>/qr")
 @login_required
 def download_qr(card_id):
-    card = VCard.query.get_or_404(card_id)
+    card = get_owned_or_404(VCard, card_id)
     if not card.qr_filename:
         flash("This vCard has no QR code yet — regenerate it first.", "error")
         return redirect(url_for("vcard.list_view"))
@@ -265,7 +274,7 @@ def serve_image(filename):
 @login_required
 def preview(card_id):
     """Signed-in preview of the public page, reachable from the listing."""
-    card = VCard.query.get_or_404(card_id)
+    card = get_owned_or_404(VCard, card_id)
     return render_template("vcard/public.html", card=card, is_preview=True)
 
 

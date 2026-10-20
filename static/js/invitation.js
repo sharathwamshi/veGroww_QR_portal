@@ -13,7 +13,8 @@
 (function () {
   "use strict";
 
-  var STORE_PREFIX = "vegroww.invite.saved.";
+  var STORE_PREFIX = "qrsaathi.invite.saved.";
+  var LEGACY_PREFIX = "vegroww.invite.saved.";   // earlier versions; still honoured
 
   function pageKey() {
     return STORE_PREFIX + window.location.pathname;
@@ -24,7 +25,10 @@
   }
 
   function alreadySaved() {
-    try { return localStorage.getItem(pageKey()) === "1"; } catch (e) { return false; }
+    try {
+      return localStorage.getItem(pageKey()) === "1" ||
+             localStorage.getItem(LEGACY_PREFIX + window.location.pathname) === "1";
+    } catch (e) { return false; }
   }
 
   /* ------------------------------------------------------------------

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "_macros.html" as m with context %}
 {% block title %}Digital vCards{% endblock %}
 {% block content %}
 
@@ -7,10 +8,13 @@
     <h1>Digital vCards</h1>
     <p class="subtitle">Shareable contact pages, each with its own QR code and downloadable contact file.</p>
   </div>
-  <div>
-    <a href="{{ url_for('vcard.create') }}" class="btn btn-primary">+ New vCard</a>
+  <div class="header-actions">
+    {{ m.quota_meter('vcard') }}
+    {{ m.new_button('vcard', url_for('vcard.create'), '+ New vCard') }}
   </div>
 </div>
+
+{{ m.limit_notice('vcard') }}
 
 {% if cards %}
 <div class="list-toolbar">
@@ -49,7 +53,7 @@
 
     <div class="qr-actions">
       <a class="btn btn-primary btn-sm btn-grow" href="{{ url_for('vcard.preview', card_id=card.id) }}" target="_blank" rel="noopener">View page</a>
-      <a class="btn btn-outline btn-sm btn-grow" href="{{ url_for('vcard.edit', card_id=card.id) }}">Edit</a>
+      <a class="btn btn-outline btn-sm btn-grow" href="{{ url_for('vcard.edit', card_id=card.id) }}" data-write>Edit</a>
 
       {% if card.qr_filename %}
       <button type="button" class="btn btn-outline btn-sm btn-icon qr-open"
@@ -79,7 +83,8 @@
       </button>
 
       <form method="POST" action="{{ url_for('vcard.regenerate', card_id=card.id) }}"
-            onsubmit="return confirm('Regenerate the QR for {{ card.full_name }}? Codes already printed will still work — they point at the same page.');">
+            data-confirm="Regenerate the QR for {{ card.full_name }}? Codes already printed will still work — they point at the same page.">
+{{ csrf_field() }}
         <button type="submit" class="btn btn-ghost btn-sm btn-icon" title="Regenerate QR" aria-label="Regenerate QR for {{ card.full_name }}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 12a9 9 0 1 1-2.64-6.36"></path><path d="M21 3v6h-6"></path>
@@ -88,7 +93,8 @@
       </form>
 
       <form method="POST" action="{{ url_for('vcard.delete', card_id=card.id) }}"
-            onsubmit="return confirm('Delete the vCard for {{ card.full_name }}? The public page and its QR will stop working.');">
+            data-confirm="Delete the vCard for {{ card.full_name }}? The public page and its QR will stop working.">
+{{ csrf_field() }}
         <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Delete" aria-label="Delete {{ card.full_name }}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M4 7h16"></path><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
@@ -109,7 +115,7 @@
 <div class="panel empty-state">
   <div class="icon">&#128100;</div>
   <p>No vCards yet. Build one and you'll get a shareable contact page, a QR code that opens it, and an "Add contact" button that saves straight to a phone.</p>
-  <a href="{{ url_for('vcard.create') }}" class="btn btn-primary">Create your first vCard</a>
+  <a href="{{ url_for('vcard.create') }}" class="btn btn-primary" data-write>Create your first vCard</a>
 </div>
 {% endif %}
 

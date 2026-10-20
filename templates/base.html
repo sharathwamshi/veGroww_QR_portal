@@ -7,13 +7,29 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-  <div class="app-shell">
+  <div class="app-shell {{ 'readonly-mode' if module_readonly }}">
+
+    {# Phones/tablets only: slim top bar; the sidebar becomes a slide-in drawer #}
+    <header class="mobile-bar">
+      <button type="button" class="mobile-menu-btn" data-drawer-open aria-controls="sidebar" aria-expanded="false" aria-label="Open menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"></path></svg>
+      </button>
+      <a class="mobile-brand" href="{{ url_for('dashboard.home') }}">{{ app_name }}</a>
+      {% if current_user %}
+      <a class="mobile-avatar" href="{{ url_for('account.home') }}" aria-label="My account">
+        <span class="avatar sm {{ 'is-admin' if current_user.is_admin }}">{{ current_user.initials }}</span>
+      </a>
+      {% endif %}
+    </header>
+    <div class="drawer-backdrop" data-drawer-close hidden></div>
+
     <aside class="sidebar" id="sidebar">
       <div class="brand">
         <div class="brand-text">
           <div class="brand-name">{{ app_name }}</div>
           <div class="brand-tag">{{ app_tagline }}</div>
         </div>
+        <button type="button" class="drawer-close" data-drawer-close aria-label="Close menu">&times;</button>
         <button type="button" class="sidebar-toggle" data-sidebar-toggle
                 aria-label="Collapse menu" aria-expanded="true" title="Collapse menu">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -22,44 +38,68 @@
         </button>
       </div>
 
+      {# Links scroll inside this area on short screens, so the account
+         footer below (name + Sign out) always stays visible. #}
+      <nav class="nav-scroll" aria-label="Main menu">
       <a class="nav-link {% if request.endpoint == 'dashboard.home' %}active{% endif %}" href="{{ url_for('dashboard.home') }}" data-nav-label="Dashboard">
         <span class="icon">&#9673;</span><span class="nav-text">Dashboard</span>
       </a>
-      <a class="nav-link {% if request.endpoint and request.endpoint.startswith('id_cards.') %}active{% endif %}" href="{{ url_for('id_cards.batches') }}" data-nav-label="ID Card Generator">
-        <span class="icon">&#127915;</span><span class="nav-text">ID Card Generator</span>
-      </a>
 
-      <a class="nav-link {% if request.endpoint and request.endpoint.startswith('vcard.') %}active{% endif %}" href="{{ url_for('vcard.list_view') }}" data-nav-label="Digital vCards">
-        <span class="icon">&#128100;</span><span class="nav-text">Digital vCards</span>
+      {% for item in nav_modules %}
+      <a class="nav-link {% if request.blueprint == item.key %}active{% endif %}"
+         href="{{ url_for(item.meta.endpoint) }}" data-nav-label="{{ item.meta.label }}">
+        <span class="icon">{{ item.meta.icon|safe }}</span>
+        <span class="nav-text">{{ item.meta.label }}{% if item.readonly %} <span class="nav-tag">View only</span>{% endif %}</span>
       </a>
-      <a class="nav-link {% if request.endpoint and request.endpoint.startswith('invitation.') %}active{% endif %}" href="{{ url_for('invitation.list_view') }}" data-nav-label="Invitations">
-        <span class="icon">&#128233;</span><span class="nav-text">Invitations</span>
-      </a>
+      {% endfor %}
 
-      <a class="nav-link {% if request.endpoint and request.endpoint.startswith('url_qr.') %}active{% endif %}" href="{{ url_for('url_qr.list_view') }}" data-nav-label="URL QR">
-        <span class="icon">&#128279;</span><span class="nav-text">URL QR</span>
+      {% if current_user and current_user.is_admin %}
+      <div class="nav-section"><span class="nav-text">Administration</span></div>
+      <a class="nav-link {% if request.endpoint and request.endpoint.startswith('admin.user') %}active{% endif %}"
+         href="{{ url_for('admin.users') }}" data-nav-label="Users">
+        <span class="icon">&#128101;</span>
+        <span class="nav-text">Users{% if admin_pending_count %} <span class="nav-count" title="{{ admin_pending_count }} awaiting approval">{{ admin_pending_count }}</span>{% endif %}</span>
       </a>
-
-      <a class="nav-link {% if request.endpoint and request.endpoint.startswith('image_qr.') %}active{% endif %}" href="{{ url_for('image_qr.list_view') }}" data-nav-label="Image QR">
-        <span class="icon">&#128247;</span><span class="nav-text">Image QR</span>
+      <a class="nav-link {% if request.endpoint == 'admin.settings' %}active{% endif %}"
+         href="{{ url_for('admin.settings') }}" data-nav-label="Access settings">
+        <span class="icon">&#9881;</span><span class="nav-text">Access settings</span>
       </a>
-      <a class="nav-link {% if request.endpoint and request.endpoint.startswith('upi_qr.') %}active{% endif %}" href="{{ url_for('upi_qr.list_view') }}" data-nav-label="UPI Payment QR">
-        <span class="icon">&#8377;</span><span class="nav-text">UPI Payment QR</span>
-      </a>
+      {% endif %}
+      </nav>
 
       <div class="nav-footer">
-        <div class="user">Signed in as <strong>{{ session.get('username', 'admin') }}</strong></div>
-        <a class="logout-btn" href="{{ url_for('auth.logout') }}" data-nav-label="Log out">
-          <span class="icon">&#9099;</span><span class="nav-text">Log out</span>
+        {% if current_user %}
+        <a class="user-chip {% if request.blueprint == 'account' %}active{% endif %}" href="{{ url_for('account.home') }}"
+           data-nav-label="My account" title="My account">
+          <span class="avatar">{{ current_user.initials }}</span>
+          <span class="nav-text user-chip-text">
+            <span class="user-chip-name">{{ current_user.name }}</span>
+            <span class="user-chip-sub">{{ 'Administrator' if current_user.is_admin else (current_user.email or current_user.username) }}</span>
+          </span>
         </a>
+        <form method="POST" action="{{ url_for('auth.logout') }}" class="logout-form">
+          {{ csrf_field() }}
+          <button type="submit" class="logout-btn" data-nav-label="Sign out">
+            <span class="icon">&#9099;</span><span class="nav-text">Sign out</span>
+          </button>
+        </form>
+        {% endif %}
       </div>
     </aside>
 
     <main class="main-content">
+      {% if module_readonly %}
+      <div class="flash flash-info readonly-banner">
+        <strong>View only.</strong> This feature has been switched off for your account, so you can't create
+        or change anything here. You can still open and download what you've already made, and your
+        published pages and QR codes keep working. Ask your administrator if you need it back.
+      </div>
+      {% endif %}
+
       {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
           {% for category, message in messages %}
-            <div class="flash flash-{{ category }}">{{ message }}</div>
+            <div class="flash flash-{{ category }}" role="{{ 'alert' if category == 'error' else 'status' }}">{{ message }}</div>
           {% endfor %}
         {% endif %}
       {% endwith %}

@@ -11,6 +11,7 @@
 
 <div class="panel" style="max-width:640px;">
   <form method="POST" enctype="multipart/form-data">
+{{ csrf_field() }}
     <div class="form-group">
       <label for="data_file">Employee Data File (.csv, .xlsx, .xls)</label>
       <input type="file" id="data_file" name="data_file" accept=".csv,.xlsx,.xls" required>

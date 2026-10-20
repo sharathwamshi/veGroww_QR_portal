@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "_macros.html" as m with context %}
 {% block title %}{{ batch.name }}{% endblock %}
 {% block content %}
 
@@ -10,12 +11,15 @@
       &middot; {{ batch.generated_cards }} card{{ '' if batch.generated_cards == 1 else 's' }} generated
     </p>
   </div>
-  <div>
-    <a href="{{ url_for('id_cards.batch_edit', batch_id=batch.id) }}" class="btn btn-outline">Batch settings</a>
-    <a href="{{ url_for('id_cards.bulk_upload', batch_id=batch.id) }}" class="btn btn-outline">Bulk upload</a>
-    <a href="{{ url_for('id_cards.entry_new', batch_id=batch.id) }}" class="btn btn-primary">+ Add employee</a>
+  <div class="header-actions">
+    {{ m.quota_meter('id_cards') }}
+    <a href="{{ url_for('id_cards.batch_edit', batch_id=batch.id) }}" class="btn btn-outline" data-write>Batch settings</a>
+    <a href="{{ url_for('id_cards.bulk_upload', batch_id=batch.id) }}" class="btn btn-outline" data-write>Bulk upload</a>
+    <a href="{{ url_for('id_cards.entry_new', batch_id=batch.id) }}" class="btn btn-primary" data-write>+ Add employee</a>
   </div>
 </div>
+
+{{ m.limit_notice('id_cards') }}
 
 {% if batch.logo_filename or batch.signature_filename %}
 <div class="panel" style="display:flex; gap:32px; align-items:center; flex-wrap:wrap;">
@@ -41,7 +45,8 @@
     <h2>Employees</h2>
     {% if batch.total_cards %}
     <form method="POST" action="{{ url_for('id_cards.batch_generate_all', batch_id=batch.id) }}"
-          onsubmit="return confirm('Generate cards for every employee with a photo uploaded?');">
+          data-confirm="Generate cards for every employee with a photo uploaded?">
+{{ csrf_field() }}
       <button type="submit" class="btn btn-primary btn-sm">Generate all ready cards</button>
     </form>
     {% endif %}
@@ -95,6 +100,7 @@
               {% if not card.photo_filename %}
                 <form method="POST" action="{{ url_for('id_cards.card_photo_upload', card_id=card.id) }}"
                       enctype="multipart/form-data" style="display:inline-flex; gap:6px; align-items:center;">
+{{ csrf_field() }}
                   <input type="file" name="photo" accept=".png,.jpg,.jpeg,.webp" required style="width:158px;">
                   <button type="submit" class="btn btn-outline btn-sm">Upload</button>
                 </form>
@@ -120,6 +126,7 @@
                 </button>
 
                 <form method="POST" action="{{ url_for('id_cards.card_generate', card_id=card.id) }}">
+{{ csrf_field() }}
                   <button type="submit" class="btn btn-ghost btn-sm btn-icon" title="Regenerate card and QR"
                           aria-label="Regenerate card for {{ card.name }}">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -129,14 +136,16 @@
                 </form>
               {% else %}
                 <form method="POST" action="{{ url_for('id_cards.card_generate', card_id=card.id) }}">
+{{ csrf_field() }}
                   <button type="submit" class="btn btn-primary btn-sm">Generate</button>
                 </form>
               {% endif %}
 
-              <a class="btn btn-ghost btn-sm" href="{{ url_for('id_cards.card_edit', card_id=card.id) }}">Edit</a>
+              <a class="btn btn-ghost btn-sm" href="{{ url_for('id_cards.card_edit', card_id=card.id) }}" data-write>Edit</a>
 
               <form method="POST" action="{{ url_for('id_cards.card_delete', card_id=card.id) }}"
-                    onsubmit="return confirm('Delete {{ card.name }}? This removes their photo, card and QR code.');">
+                    data-confirm="Delete {{ card.name }}? This removes their photo, card and QR code.">
+{{ csrf_field() }}
                 <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Delete" aria-label="Delete {{ card.name }}">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M4 7h16"></path><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
@@ -160,8 +169,8 @@
   <div class="empty-state">
     <div class="icon">&#128100;</div>
     <p>No employees in this batch yet. Import a sheet or add someone manually to get started.</p>
-    <a href="{{ url_for('id_cards.bulk_upload', batch_id=batch.id) }}" class="btn btn-primary">Bulk upload data</a>
-    <a href="{{ url_for('id_cards.entry_new', batch_id=batch.id) }}" class="btn btn-outline">Add manually</a>
+    <a href="{{ url_for('id_cards.bulk_upload', batch_id=batch.id) }}" class="btn btn-primary" data-write>Bulk upload data</a>
+    <a href="{{ url_for('id_cards.entry_new', batch_id=batch.id) }}" class="btn btn-outline" data-write>Add manually</a>
   </div>
   {% endif %}
 </div>

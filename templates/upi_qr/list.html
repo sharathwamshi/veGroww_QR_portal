@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "_macros.html" as m with context %}
 {% block title %}UPI Payment QR Codes{% endblock %}
 {% block content %}
 
@@ -7,10 +8,13 @@
     <h1>UPI Payment QR Codes</h1>
     <p class="subtitle">All generated payment QR codes, managed from one place.</p>
   </div>
-  <div>
-    <a href="{{ url_for('upi_qr.generate') }}" class="btn btn-primary">+ New UPI QR</a>
+  <div class="header-actions">
+    {{ m.quota_meter('upi_qr') }}
+    {{ m.new_button('upi_qr', url_for('upi_qr.generate'), '+ New UPI QR') }}
   </div>
 </div>
+
+{{ m.limit_notice('upi_qr') }}
 
 {% if items %}
 <div class="list-toolbar">
@@ -71,7 +75,8 @@
       </button>
 
       <form method="POST" action="{{ url_for('upi_qr.delete', item_id=item.id) }}"
-            onsubmit="return confirm('Delete the UPI QR for {{ item.upi_id }}? This cannot be undone.');">
+            data-confirm="Delete the UPI QR for {{ item.upi_id }}? This cannot be undone.">
+{{ csrf_field() }}
         <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Delete" aria-label="Delete UPI QR for {{ label }}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M4 7h16"></path><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
@@ -92,7 +97,7 @@
 <div class="panel empty-state">
   <div class="icon">&#8377;</div>
   <p>No UPI payment QR codes yet. Enter a UPI ID and the portal will build a scannable payment code.</p>
-  <a href="{{ url_for('upi_qr.generate') }}" class="btn btn-primary">Generate your first one</a>
+  <a href="{{ url_for('upi_qr.generate') }}" class="btn btn-primary" data-write>Generate your first one</a>
 </div>
 {% endif %}
 

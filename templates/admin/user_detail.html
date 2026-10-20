@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% from "admin/_access_grid.html" import access_grid with context %}
+{% block title %}{{ user.name }} &mdash; Users{% endblock %}
+{% block content %}
+
+<a href="{{ url_for('admin.users') }}" class="back-link">&larr; All users</a>
+
+<div class="page-header user-header">
+  <div class="user-header-main">
+    <span class="avatar lg {{ 'is-admin' if user.is_admin }}">{{ user.initials }}</span>
+    <div>
+      <h1>{{ user.name }}{% if is_self %} <span class="you-tag">You</span>{% endif %}</h1>
+      <p class="subtitle">
+        {{ user.email or user.username }}
+        &middot; joined {{ user.created_at.strftime('%d %b %Y') if user.created_at else '—' }}
+        &middot; last sign-in {{ user.last_login_at.strftime('%d %b %Y, %I:%M %p') if user.last_login_at else 'never' }}
+      </p>
+    </div>
+  </div>
+  <div>
+    {% if user.is_admin %}<span class="badge badge-admin">Administrator</span>
+    {% elif user.status == 'active' %}<span class="badge badge-generated">Active</span>
+    {% elif user.status == 'pending' %}<span class="badge badge-ready">Awaiting approval</span>
+    {% else %}<span class="badge badge-pending">Disabled</span>{% endif %}
+  </div>
+</div>
+
+{% if user.is_admin %}
+<div class="panel">
+  <h2>Administrator account</h2>
+  <p class="panel-intro">
+    The administrator has every feature with no limits, and can't be disabled or deleted.
+    {% if is_self %}Edit your name, email and password from <a href="{{ url_for('account.home') }}">My account</a>.{% endif %}
+  </p>
+  <div class="mini-stats">
+    <div><span class="v">{{ overview.lifetime_total }}</span><span class="l">Items owned</span></div>
+  </div>
+</div>
+{% else %}
+
+{# ---------------- Approval call-to-action ---------------- #}
+{% if user.status == 'pending' %}
+<div class="callout">
+  <div>
+    <strong>{{ user.name.split()[0] }} is waiting for approval.</strong>
+    Check the access below first if you want to change it, then approve. They can sign in straight after.
+  </div>
+  <div class="btn-row">
+    <form method="POST" action="{{ url_for('admin.user_status', user_id=user.id) }}">
+      {{ csrf_field() }}<input type="hidden" name="status" value="active">
+      <button type="submit" class="btn btn-primary">Approve account</button>
+    </form>
+    <form method="POST" action="{{ url_for('admin.user_status', user_id=user.id) }}"
+          data-confirm="Decline {{ user.name }}'s request? Their account will be disabled; you can enable it later or delete it.">
+      {{ csrf_field() }}<input type="hidden" name="status" value="disabled">
+      <button type="submit" class="btn btn-outline">Decline</button>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+<div class="two-col wide-left">
+  <div>
+    {# ---------------- Access & limits ---------------- #}
+    <section class="panel" id="access">
+      <div class="section-toolbar">
+        <h2 style="margin:0;">Features &amp; limits</h2>
+        <form method="POST" action="{{ url_for('admin.user_apply_defaults', user_id=user.id) }}"
+              data-confirm="Replace {{ user.name }}'s access and limits with the current new-user defaults?">
+          {{ csrf_field() }}
+          <button type="submit" class="btn btn-ghost btn-sm" title="Copy the current new-user defaults onto this account">Reset to defaults</button>
+        </form>
+      </div>
+      <p class="panel-intro">Switch features on or off and set how many of each {{ user.name.split()[0] }} can create. Changes apply immediately. If you switch a feature off, everything they already made stays online and they can still view and download it.</p>
+
+      <form method="POST" action="{{ url_for('admin.user_access', user_id=user.id) }}" data-dirty-guard>
+        {{ csrf_field() }}
+        {{ access_grid(values, user.limit_period, user.total_limit, overview.modules) }}
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Save access &amp; limits</button>
+          <span class="hint dirty-hint" data-dirty-hint hidden>You have unsaved changes.</span>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <div>
+    {# ---------------- Profile ---------------- #}
+    <section class="panel">
+      <h2>Profile</h2>
+      <form method="POST" action="{{ url_for('admin.user_profile', user_id=user.id) }}">
+        {{ csrf_field() }}
+        <div class="form-group">
+          <label for="name">Full name</label>
+          <input type="text" id="name" name="name" value="{{ user.name }}" required>
+        </div>
+        <div class="form-group">
+          <label for="email">Email (used to sign in)</label>
+          <input type="email" id="email" name="email" value="{{ user.email or '' }}" required>
+        </div>
+        <button type="submit" class="btn btn-outline">Save profile</button>
+      </form>
+    </section>
+
+    {# ---------------- Account status ---------------- #}
+    {% if user.status != 'pending' %}
+    <section class="panel">
+      <h2>Account status</h2>
+      {% if user.status == 'active' %}
+        <p class="panel-intro">Disabling signs {{ user.name.split()[0] }} out immediately and stops them signing in. Their published pages and QR codes keep working.</p>
+        <form method="POST" action="{{ url_for('admin.user_status', user_id=user.id) }}"
+              data-confirm="Disable {{ user.name }}'s account? They'll be signed out straight away.">
+          {{ csrf_field() }}<input type="hidden" name="status" value="disabled">
+          <button type="submit" class="btn btn-danger">Disable account</button>
+        </form>
+      {% else %}
+        <p class="panel-intro">This account is disabled. Enable it to let {{ user.name.split()[0] }} sign in again with their existing password.</p>
+        <form method="POST" action="{{ url_for('admin.user_status', user_id=user.id) }}">
+          {{ csrf_field() }}<input type="hidden" name="status" value="active">
+          <button type="submit" class="btn btn-primary">Enable account</button>
+        </form>
+      {% endif %}
+    </section>
+    {% endif %}
+
+    {# ---------------- Password ---------------- #}
+    <section class="panel" id="password">
+      <h2>Reset password</h2>
+      <p class="panel-intro">Sets a new password and signs them out everywhere. Share it with them privately.</p>
+      <form method="POST" action="{{ url_for('admin.user_password', user_id=user.id) }}" autocomplete="off">
+        {{ csrf_field() }}
+        <div class="form-group">
+          <label for="new_password">New password</label>
+          <div class="password-field">
+            <input type="text" id="new_password" name="new_password" required autocomplete="new-password" data-password-meter>
+            <button type="button" class="password-toggle" data-generate-password="new_password">Generate</button>
+          </div>
+          <ul class="password-rules" data-password-rules>
+            <li data-rule="length">At least 8 characters</li>
+            <li data-rule="mix">A letter and a number</li>
+          </ul>
+        </div>
+        <div class="form-group">
+          <label for="confirm_password">Confirm</label>
+          <input type="text" id="confirm_password" name="confirm_password" required autocomplete="new-password"
+                 data-password-confirm="new_password">
+          <p class="hint field-error" data-confirm-hint hidden>The passwords don't match yet.</p>
+        </div>
+        <button type="submit" class="btn btn-outline">Reset password</button>
+      </form>
+    </section>
+
+    {# ---------------- Danger zone ---------------- #}
+    <section class="panel danger-zone" id="danger">
+      <h2>Delete account</h2>
+      <p class="panel-intro">
+        Permanently removes {{ user.name.split()[0] }}'s account and <strong>all {{ overview.lifetime_total }} item{{ '' if overview.lifetime_total == 1 else 's' }}</strong>
+        they created, including uploaded files. Their public pages and QR codes will stop working. This can't be undone.
+        To keep their work online, disable the account instead.
+      </p>
+      <form method="POST" action="{{ url_for('admin.user_delete', user_id=user.id) }}" data-delete-guard>
+        {{ csrf_field() }}
+        <div class="form-group">
+          <label for="confirm">Type <code>{{ user.email or user.username }}</code> to confirm</label>
+          <input type="text" id="confirm" name="confirm" autocomplete="off" autocapitalize="none" spellcheck="false"
+                 data-must-equal="{{ user.email or user.username }}">
+        </div>
+        <button type="submit" class="btn btn-danger" disabled data-delete-button>Delete account permanently</button>
+      </form>
+    </section>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

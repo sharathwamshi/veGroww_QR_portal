@@ -10,6 +10,13 @@ class UpiQR(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
 
+    # Owning account. Nullable so pre-migration rows stay valid; the app
+    # assigns any un-owned row to the admin on boot.
+    owner_id = db.Column(
+        db.Integer, db.ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=True, index=True,
+    )
+
     upi_id = db.Column(db.String(150), nullable=False)
     payee_name = db.Column(db.String(150), nullable=True)
     amount = db.Column(db.Numeric(10, 2), nullable=True)

@@ -17,6 +17,13 @@ class VCard(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
 
+    # Owning account. Nullable so pre-migration rows stay valid; the app
+    # assigns any un-owned row to the admin on boot.
+    owner_id = db.Column(
+        db.Integer, db.ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=True, index=True,
+    )
+
     # Public URL segment: /v/<slug>. Readable and stable once created.
     slug = db.Column(db.String(80), unique=True, nullable=False, index=True)
     # Label used in the admin listing and on the downloaded QR filename.

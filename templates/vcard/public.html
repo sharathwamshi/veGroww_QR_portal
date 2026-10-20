@@ -19,7 +19,7 @@
 
   {% if is_preview %}
   <div class="vc-preview-bar">
-    Preview &middot; <a href="{{ url_for('vcard.edit', card_id=card.id) }}">Edit this card</a>
+    Preview &middot; <a href="{{ url_for('vcard.edit', card_id=card.id) }}" data-write>Edit this card</a>
     &middot; <a href="{{ url_for('vcard.list_view') }}">Back to vCards</a>
   </div>
   {% endif %}
@@ -92,7 +92,7 @@
           {% endfor %}
 
           {% for link in card.websites %}
-          <li><a class="vc-row" href="{{ link.value }}" target="_blank" rel="noopener">
+          <li><a class="vc-row" href="{{ link.value|safe_href }}" target="_blank" rel="noopener">
             <span class="vc-row-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18"></path>
@@ -115,7 +115,7 @@
         <ul class="vc-rows">
           {% for link in card.socials %}
           {% set meta = platform_meta(link.platform) %}
-          <li><a class="vc-row" href="{{ link.value }}" target="_blank" rel="noopener">
+          <li><a class="vc-row" href="{{ link.value|safe_href }}" target="_blank" rel="noopener">
             <span class="vc-chip" style="background: {{ meta[1] }};">{{ meta[2] }}</span>
             <span class="vc-row-text">
               <span class="vc-row-value">{{ meta[0] }}</span>
