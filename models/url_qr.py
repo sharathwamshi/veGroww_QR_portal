@@ -7,9 +7,8 @@ class UrlQR(db.Model):
     """
     A QR code pointing at any external URL.
 
-    The long URL is shortened via TinyURL before encoding (same as image
-    QRs) so the printed code stays sparse and scans reliably; short_url
-    falls back to None when shortening is unavailable.
+    The QR encodes target_url exactly as entered. short_url is a legacy
+    column from an earlier link-shortener and is no longer filled in.
     """
 
     __tablename__ = "url_qrs"
@@ -33,8 +32,8 @@ class UrlQR(db.Model):
 
     @property
     def encoded_url(self) -> str:
-        """Whatever the QR actually carries."""
-        return self.short_url or self.target_url
+        """The address the QR opens."""
+        return self.target_url
 
     def __repr__(self):
         return f"<UrlQR {self.name}>"

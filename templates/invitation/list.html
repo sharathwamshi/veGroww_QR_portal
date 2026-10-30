@@ -29,7 +29,7 @@
 
 <div class="qr-grid vcard-grid" data-filter-scope>
   {% for inv in invitations %}
-  {% set link = inv.qr_short_url or inv.qr_target_url %}
+  {% set link = inv.qr_target_url %}
   <article class="qr-card vcard-card {{ 'is-past' if inv.is_past }}"
            data-filter-text="{{ inv.headline }} {{ inv.meta.name }} {{ inv.venue_name }} {{ inv.title }}">
 

@@ -72,7 +72,7 @@ def upload():
 
 @image_qr_bp.route("/file/<path:filename>")
 def serve_image(filename):
-    """Public route: this is the exact link that gets embedded (and shortened) in the QR."""
+    """Public route: this is the exact link embedded in the QR."""
     return send_from_directory(current_app.config["IMAGE_QR_SOURCE_DIR"], filename)
 
 

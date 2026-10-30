@@ -278,8 +278,8 @@ def preview(card_id):
     return render_template("vcard/public.html", card=card, is_preview=True)
 
 
-# Public pages live at /vcard/v/<slug>. TinyURL shortens whatever this
-# resolves to before it reaches the QR, so the printed code stays sparse.
+# Public pages live at /vcard/v/<slug> - this full site address is what the
+# card's QR code opens.
 @vcard_bp.route("/v/<slug>")
 def public_view(slug):
     card = VCard.query.filter_by(slug=slug).first_or_404()

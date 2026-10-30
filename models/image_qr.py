@@ -22,7 +22,7 @@ class ImageQR(db.Model):
     qr_filename = db.Column(db.String(255), nullable=False)
 
     target_url = db.Column(db.String(500), nullable=False)   # full local/public URL to the image
-    short_url = db.Column(db.String(500), nullable=True)     # TinyURL-shortened version, if reachable
+    short_url = db.Column(db.String(500), nullable=True)     # legacy, no longer filled in
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 

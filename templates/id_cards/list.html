@@ -107,7 +107,7 @@
               {% elif card.status == 'generated' %}
                 <a class="btn btn-outline btn-sm" href="{{ url_for('id_cards.download_card', card_id=card.id) }}">Card</a>
 
-                {% set verify_link = card.qr_short_url or card.qr_target_url %}
+                {% set verify_link = card.qr_target_url %}
                 <button type="button" class="btn btn-primary btn-sm qr-open"
                         data-qr-src="{{ url_for('media_qr', filename=card.qr_filename) }}"
                         data-qr-download="{{ url_for('id_cards.download_qr', card_id=card.id) }}"

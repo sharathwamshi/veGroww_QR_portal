@@ -124,7 +124,7 @@ def regenerate(item_id):
     item.qr_filename = qr_filename
     item.short_url = short_url
     db.session.commit()
-    flash("QR code regenerated with a fresh short link.", "success")
+    flash("QR code regenerated.", "success")
     return redirect(url_for("url_qr.list_view"))
 
 

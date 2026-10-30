@@ -132,18 +132,18 @@ class Config:
     ALLOWED_ARCHIVE_EXTENSIONS = _env_set("ALLOWED_ARCHIVE_EXTENSIONS", "zip")
 
     # ---------------------------------------------------------------
-    # Public base URL - used to build the link that gets embedded in
-    # QR codes before shortening. Point this at wherever the app is
-    # actually reachable (e.g. https://id.yourcompany.com) in production.
+    # Public base URL - the site address embedded in every QR code.
+    # Point this at wherever the app is actually reachable
+    # (e.g. https://qr.yourcompany.com) in production.
     # ---------------------------------------------------------------
     PUBLIC_BASE_URL = _env_str("PUBLIC_BASE_URL", "http://127.0.0.1:5000")
 
-    # TinyURL free endpoint - no API key required for basic shortening
-    TINYURL_API = _env_str("TINYURL_API", "https://tinyurl.com/api-create.php")
-    TINYURL_TIMEOUT = _env_int("TINYURL_TIMEOUT", 5)  # fail soft to full URL if unreachable
 
     # ---------------------------------------------------------------
     # Branding
     # ---------------------------------------------------------------
-    APP_NAME = _env_str("APP_NAME", "QR Saathi")
-    APP_TAGLINE = _env_str("APP_TAGLINE", "Powered by Akruthi India")
+    # Fixed product branding. Deliberately NOT read from .env, so an old
+    # APP_NAME / APP_TAGLINE line left in a .env file can't bring back a
+    # previous name anywhere in the app.
+    APP_NAME = "QR Saathi"
+    APP_TAGLINE = "Powered by Akruthi India"

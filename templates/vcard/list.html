@@ -29,7 +29,7 @@
 
 <div class="qr-grid vcard-grid" data-filter-scope>
   {% for card in cards %}
-  {% set link = card.qr_short_url or card.qr_target_url %}
+  {% set link = card.qr_target_url %}
   <article class="qr-card vcard-card" data-filter-text="{{ card.full_name }} {{ card.company or '' }} {{ card.profession or '' }} {{ card.slug }}">
 
     <div class="vcard-banner" style="background: linear-gradient(135deg, {{ card.primary_color }} 0%, {{ card.secondary_color }} 100%);">

@@ -46,7 +46,6 @@
     <div class="qr-body">
       <div class="qr-title">{{ item.name }}</div>
       <div class="qr-meta"><code>{{ item.encoded_url }}</code></div>
-      {% if item.short_url %}<div class="qr-stamp">Goes to {{ item.target_url }}</div>{% endif %}
       {% if item.created_at %}<div class="qr-stamp">Created {{ item.created_at.strftime('%d %b %Y') }}</div>{% endif %}
     </div>
 

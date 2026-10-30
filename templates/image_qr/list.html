@@ -29,7 +29,7 @@
 
 <div class="qr-grid" data-filter-scope>
   {% for item in items %}
-  {% set encoded = item.short_url or item.target_url %}
+  {% set encoded = item.target_url %}
   <article class="qr-card" data-filter-text="{{ item.title }} {{ encoded }}">
     <div class="qr-plate">
       <img src="{{ url_for('media_qr', filename=item.qr_filename) }}" alt="QR code for {{ item.title }}" loading="lazy">

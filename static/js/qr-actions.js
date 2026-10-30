@@ -9,7 +9,7 @@
              data-qr-download="/image-qr/1/qr"       (required)
              data-qr-title="Testing"
              data-qr-kind="Image QR"
-             data-qr-link="https://tinyurl.com/..."  (value encoded in the QR)
+             data-qr-link="https://your-site/..."  (value encoded in the QR)
              data-qr-link-label="Encoded link">
    ===================================================================== */
 (function () {

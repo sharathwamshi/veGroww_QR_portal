@@ -2,6 +2,8 @@
 
 *Powered by Akruthi India*
 
+The product name and tagline are fixed in the app and appear on every screen.
+
 A self-hosted Flask portal where people sign up, sign in and create QR-based
 content inside their **own private account**. An administrator approves
 accounts, decides which features each person can use, and sets how many
@@ -14,7 +16,7 @@ items they can create.
 | **ID Card Generator** | Employee ID cards in batches (CSV/Excel import or manual entry) with a verification QR | `/id-cards/verify/<id>` |
 | **Digital vCards** | Shareable contact pages with an *Add contact* (.vcf) button | `/vcard/v/<slug>` |
 | **Invitations** | Event cards (24 occasion types) with calendar (.ics) and Maps buttons | `/invitation/i/<slug>` |
-| **URL QR** | A QR for any web address, shortened via TinyURL | — |
+| **URL QR** | A QR that opens any web address directly | — |
 | **Image QR** | Upload an image, get a QR that opens it | `/image-qr/file/<name>` |
 | **UPI Payment QR** | `upi://pay` codes for any UPI app | — |
 
@@ -85,9 +87,7 @@ empty database and the app creates everything itself.
 | `AUTO_CREATE_TABLES` | `0` when the schema is managed with the SQL files |
 | `ADMIN_USERNAME`, `ADMIN_PASSWORD` | Used **once**, to create the admin on first start. Afterwards change the password in *My account*. |
 | `UPLOAD_ROOT`, `MAX_UPLOAD_MB`, `ALLOWED_*_EXTENSIONS` | Local file storage |
-| `PUBLIC_BASE_URL` | The address phones use to reach the portal (built into QR codes) |
-| `TINYURL_API`, `TINYURL_TIMEOUT` | Link shortening (fails soft to the full link) |
-| `APP_NAME`, `APP_TAGLINE` | Branding shown everywhere (default: *QR Saathi* / *Powered by Akruthi India*) |
+| `PUBLIC_BASE_URL` | The address phones use to reach the portal. Every QR code opens a link on this address &mdash; no link shortener is used. |
 
 **Forgotten admin password:** there is no email reset. Run this from the project folder:
 

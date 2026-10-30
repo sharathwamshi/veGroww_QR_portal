@@ -10,6 +10,15 @@ here, so they can never drift apart.
 from collections import OrderedDict
 
 MODULES = OrderedDict([
+    ("invitation", {
+        "label": "Invitations",
+        "short": "Invitations",
+        "icon": "&#128233;",
+        "endpoint": "invitation.list_view",
+        "unit": "invitations",
+        "unit_one": "invitation",
+        "blurb": "Event cards guests can save to their calendar.",
+    }),
     ("id_cards", {
         "label": "ID Card Generator",
         "short": "ID Cards",
@@ -27,15 +36,6 @@ MODULES = OrderedDict([
         "unit": "vCards",
         "unit_one": "vCard",
         "blurb": "Shareable contact pages with an Add-contact button.",
-    }),
-    ("invitation", {
-        "label": "Invitations",
-        "short": "Invitations",
-        "icon": "&#128233;",
-        "endpoint": "invitation.list_view",
-        "unit": "invitations",
-        "unit_one": "invitation",
-        "blurb": "Event cards guests can save to their calendar.",
     }),
     ("url_qr", {
         "label": "URL QR",
